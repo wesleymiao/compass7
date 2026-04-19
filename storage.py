@@ -1,13 +1,14 @@
 """
 Compass7 - Storage layer for Azure Blob Storage (JSON files)
+Supports local file storage for development/testing via STORAGE_MODE=local
 """
 import json
 import os
 import uuid
 from datetime import datetime, timezone
 
-from azure.storage.blob import BlobServiceClient
-
+STORAGE_MODE = os.environ.get("STORAGE_MODE", "azure")  # "azure" or "local"
+LOCAL_DATA_DIR = os.environ.get("LOCAL_DATA_DIR", os.path.join(os.path.dirname(__file__), "data"))
 CONNECTION_STRING = os.environ.get("AZURE_STORAGE_CONNECTION_STRING", "")
 CONTAINER_NAME = os.environ.get("AZURE_STORAGE_CONTAINER", "compass7-data")
 
@@ -17,6 +18,7 @@ _blob_service = None
 def _get_blob_service():
     global _blob_service
     if _blob_service is None:
+        from azure.storage.blob import BlobServiceClient
         _blob_service = BlobServiceClient.from_connection_string(CONNECTION_STRING)
     return _blob_service
 
@@ -27,6 +29,13 @@ def _get_container():
 
 def _read_blob(path: str, default=None):
     """Read a JSON blob. Returns default if not found."""
+    if STORAGE_MODE == "local":
+        fpath = os.path.join(LOCAL_DATA_DIR, path)
+        try:
+            with open(fpath, "r", encoding="utf-8") as f:
+                return json.load(f)
+        except (FileNotFoundError, json.JSONDecodeError):
+            return default
     try:
         client = _get_container().get_blob_client(path)
         data = client.download_blob().readall()
@@ -37,6 +46,12 @@ def _read_blob(path: str, default=None):
 
 def _write_blob(path: str, data):
     """Write a JSON blob (overwrite)."""
+    if STORAGE_MODE == "local":
+        fpath = os.path.join(LOCAL_DATA_DIR, path)
+        os.makedirs(os.path.dirname(fpath), exist_ok=True)
+        with open(fpath, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+        return
     client = _get_container().get_blob_client(path)
     client.upload_blob(json.dumps(data, ensure_ascii=False, indent=2),
                        overwrite=True, content_type="application/json")
@@ -44,6 +59,13 @@ def _write_blob(path: str, data):
 
 def _delete_blob(path: str):
     """Delete a blob if it exists."""
+    if STORAGE_MODE == "local":
+        fpath = os.path.join(LOCAL_DATA_DIR, path)
+        try:
+            os.remove(fpath)
+        except FileNotFoundError:
+            pass
+        return
     try:
         client = _get_container().get_blob_client(path)
         client.delete_blob()

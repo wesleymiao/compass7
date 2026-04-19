@@ -47,11 +47,12 @@ jobs:
 
       - name: Start server
         run: |
+          mkdir -p data
           python app.py &
           sleep 3
         env:
-          AZURE_STORAGE_CONNECTION_STRING: "mock"
-          PYTHONDONTWRITEBYTECODE: "1"
+          STORAGE_MODE: local
+          LOCAL_DATA_DIR: ./data
 
       - name: Run E2E tests
         run: pytest tests/e2e/ -v -m e2e
