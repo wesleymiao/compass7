@@ -270,6 +270,21 @@ def get_selections():
     return jsonify(sel)
 
 
+# ── Test Reset (only in testing mode) ─────────────────
+
+if os.environ.get("TESTING_MODE") == "1":
+    @app.route("/api/test/reset", methods=["POST"])
+    def test_reset():
+        """Reset all data - only available in testing mode."""
+        import shutil
+        data_dir = os.environ.get("LOCAL_DATA_DIR", "data")
+        if os.path.exists(data_dir):
+            shutil.rmtree(data_dir)
+        os.makedirs(data_dir, exist_ok=True)
+        session.clear()
+        return jsonify({"message": "Reset complete"})
+
+
 # ── Run ────────────────────────────────────────────────
 
 if __name__ == "__main__":

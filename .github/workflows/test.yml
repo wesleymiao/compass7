@@ -50,13 +50,13 @@ jobs:
           mkdir -p /tmp/compass7-data
           python app.py &
           sleep 3
-          # Verify server is working
-          curl -s -X POST http://localhost:8000/api/admin/login -H "Content-Type: application/json" -d '{"password":"test"}' || true
-          curl -s http://localhost:8000/ | head -5 || true
+          # Verify server is responding
+          curl -sf http://localhost:8000/ > /dev/null && echo "Server is running"
         env:
           STORAGE_MODE: local
           LOCAL_DATA_DIR: /tmp/compass7-data
           FLASK_DEBUG: "0"
+          TESTING_MODE: "1"
 
       - name: Run E2E tests
         run: pytest tests/e2e/ -v -m e2e
