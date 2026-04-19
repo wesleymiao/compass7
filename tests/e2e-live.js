@@ -290,6 +290,33 @@ async function test(name, fn) {
     await page.close();
   });
 
+  await test('Admin export JSON backup', async () => {
+    const page = await browser.newPage();
+    await page.goto(`${BASE}/admin`);
+    await page.fill('#admin-pwd', 'Icanbebetter3#');
+    await page.click('button:has-text("登录")');
+    await page.waitForSelector('#admin-panel', { state: 'visible', timeout: 10000 });
+    await page.waitForTimeout(1000);
+
+    const [download] = await Promise.all([
+      page.waitForEvent('download', { timeout: 15000 }),
+      page.click('#export-json-btn')
+    ]);
+    const filename = download.suggestedFilename();
+    console.log(`    Downloaded file: ${filename}`);
+    assert(filename.includes('compass7_backup') && filename.endsWith('.json'), `Expected JSON backup file, got: ${filename}`);
+
+    // Verify JSON content
+    const filePath = await download.path();
+    const fs = require('fs');
+    const content = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+    console.log(`    JSON version: ${content.version}, years: ${content.years.length}`);
+    assert(content.version === 1, 'Expected version 1');
+    assert(content.years.length > 0, 'Expected at least 1 year in export');
+    await shot(page, '16-admin-export-json');
+    await page.close();
+  });
+
   // ─── Results ──────────────────────────────────
   await browser.close();
   console.log('\n' + results.join('\n'));

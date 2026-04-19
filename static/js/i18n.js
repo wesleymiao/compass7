@@ -88,6 +88,7 @@ const I18N = {
     // Admin Export
     export_schedule: "导出课表",
     export_all_schedules: "导出所有课表",
+    export_json: "导出为 JSON",
 
     // Messages
     error_required: "此项为必填",
@@ -179,6 +180,7 @@ const I18N = {
 
     export_schedule: "Export Schedule",
     export_all_schedules: "Export All Schedules",
+    export_json: "Export as JSON",
 
     error_required: "This field is required",
     error_login: "Invalid username or password",

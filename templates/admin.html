@@ -54,7 +54,8 @@
           </div>
 
           <div class="mt-24">
-            <button class="btn btn-secondary" style="width:100%" onclick="exportAllSchedules()" id="export-all-btn" data-i18n="export_all_schedules">导出所有课表</button>
+            <button class="btn btn-secondary" style="width:100%; margin-bottom:8px" onclick="exportAllSchedules()" id="export-all-btn" data-i18n="export_all_schedules">导出所有课表</button>
+            <button class="btn btn-secondary" style="width:100%" onclick="exportAllJSON()" id="export-json-btn" data-i18n="export_json">导出为 JSON</button>
           </div>
         </div>
 
@@ -442,6 +443,33 @@
           }
         }
         XLSX.writeFile(wb, `compass7_all_schedules.xlsx`);
+        showToast(t("success_save"));
+      } catch (e) {
+        showToast(e.message, "error");
+      }
+    }
+
+    async function exportAllJSON() {
+      try {
+        const yearsData = await apiCall("/api/admin/years");
+        if (!yearsData.years.length) return showToast(t("no_data"), "error");
+
+        const exportData = { version: 1, exported_at: new Date().toISOString(), years: [] };
+        for (const year of yearsData.years) {
+          const classesData = await apiCall(`/api/admin/years/${year.id}/classes`);
+          const yearExport = { id: year.id, name: year.name, classes: [] };
+          for (const cls of classesData.classes) {
+            const schedData = await apiCall(`/api/admin/classes/${year.id}/${cls.id}/schedule`);
+            yearExport.classes.push({ id: cls.id, name: cls.name, schedule: schedData.schedule || {} });
+          }
+          exportData.years.push(yearExport);
+        }
+
+        const blob = new Blob([JSON.stringify(exportData, null, 2)], { type: "application/json" });
+        const link = document.createElement("a");
+        link.download = `compass7_backup_${new Date().toISOString().split("T")[0]}.json`;
+        link.href = URL.createObjectURL(blob);
+        link.click();
         showToast(t("success_save"));
       } catch (e) {
         showToast(e.message, "error");
