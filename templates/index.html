@@ -1,0 +1,573 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Compass7</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
+</head>
+<body>
+  <header>
+    <div class="container">
+      <a href="/" class="logo">Compass7</a>
+      <div class="header-actions">
+        <span id="user-info" class="text-secondary"></span>
+        <button class="btn-icon" id="theme-toggle" onclick="toggleTheme()">🌙</button>
+        <button class="btn btn-sm btn-secondary" onclick="toggleLang()" id="lang-toggle">EN/中</button>
+        <button class="btn btn-sm btn-secondary hidden" id="login-btn" onclick="showAuthModal()" data-i18n="login">登录</button>
+        <button class="btn btn-sm btn-secondary hidden" id="logout-btn" onclick="userLogout()" data-i18n="logout">退出</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- Steps -->
+    <div class="steps" id="steps">
+      <div class="step active" data-step="1" data-i18n="step1">选择学年</div>
+      <div class="step" data-step="2" data-i18n="step2">选择班级</div>
+      <div class="step" data-step="3" data-i18n="step3">选择课程</div>
+      <div class="step" data-step="4" data-i18n="step4">导出课表</div>
+    </div>
+
+    <!-- Step 1: Year -->
+    <div id="step-1" class="card">
+      <h2 data-i18n="select_year">请选择学年</h2>
+      <div id="year-list" class="mt-16"></div>
+    </div>
+
+    <!-- Step 2: Class -->
+    <div id="step-2" class="card hidden">
+      <h2 data-i18n="select_class">请选择班级</h2>
+      <div id="class-list" class="mt-16"></div>
+    </div>
+
+    <!-- Step 3: Course Selection -->
+    <div id="step-3" class="hidden">
+      <div class="flex-between mb-16">
+        <h2 data-i18n="select_courses">请为每个时间段选择课程</h2>
+        <button class="btn btn-primary" onclick="goToExport()" id="to-export-btn" disabled data-i18n="export_title">导出课表</button>
+      </div>
+      <div class="schedule-wrapper">
+        <table class="schedule-grid" id="user-schedule-table">
+          <thead id="user-schedule-head"></thead>
+          <tbody id="user-schedule-body"></tbody>
+        </table>
+      </div>
+    </div>
+
+    <!-- Step 4: Export -->
+    <div id="step-4" class="hidden">
+      <h2 class="mb-16" data-i18n="export_title">导出课表</h2>
+
+      <div class="export-options">
+        <div class="export-option" onclick="showExportImage()">
+          <div class="icon">📷</div>
+          <div data-i18n="export_image">导出为图片</div>
+        </div>
+        <div class="export-option" onclick="doExportExcel()">
+          <div class="icon">📊</div>
+          <div data-i18n="export_excel">导出为 Excel</div>
+        </div>
+        <div class="export-option" onclick="showExportICS()">
+          <div class="icon">📅</div>
+          <div data-i18n="export_ics">导出为日历</div>
+        </div>
+      </div>
+
+      <!-- Image export settings -->
+      <div id="image-export-panel" class="card hidden mt-16">
+        <h3 data-i18n="export_image">导出为图片</h3>
+        <div class="export-options mt-16" id="preset-options"></div>
+        <div id="custom-size" class="hidden mt-8" style="display:flex;gap:12px">
+          <div class="form-group" style="flex:1"><label data-i18n="width">宽度</label><input type="number" id="custom-w" value="1920"></div>
+          <div class="form-group" style="flex:1"><label data-i18n="height">高度</label><input type="number" id="custom-h" value="1080"></div>
+        </div>
+        <button class="btn btn-secondary mt-16" onclick="previewImage()" data-i18n="preview">预览</button>
+        <div id="image-preview" class="preview-container hidden mt-16"></div>
+        <button class="btn btn-primary mt-16 hidden" id="download-img-btn" onclick="downloadImage()" data-i18n="download">下载完整图片</button>
+      </div>
+
+      <!-- ICS export settings -->
+      <div id="ics-export-panel" class="card hidden mt-16">
+        <h3 data-i18n="export_ics">导出为日历</h3>
+        <div style="display:flex;gap:12px" class="mt-16">
+          <div class="form-group" style="flex:1"><label data-i18n="semester_start">学期开始日期</label><input type="date" id="ics-start"></div>
+          <div class="form-group" style="flex:1"><label data-i18n="semester_end">学期结束日期</label><input type="date" id="ics-end"></div>
+        </div>
+        <button class="btn btn-primary mt-8" onclick="doExportICS()" data-i18n="generate_ics">生成日历文件</button>
+      </div>
+
+      <div class="mt-24">
+        <h3 class="mb-8" data-i18n="preview">预览</h3>
+        <div class="schedule-wrapper">
+          <table class="schedule-grid" id="export-preview-table">
+            <thead id="export-preview-head"></thead>
+            <tbody id="export-preview-body"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Auth Modal -->
+  <div class="modal-overlay" id="auth-modal">
+    <div class="modal">
+      <div class="auth-tabs">
+        <div class="auth-tab active" onclick="switchAuthTab('login')" id="tab-login" data-i18n="login">登录</div>
+        <div class="auth-tab" onclick="switchAuthTab('register')" id="tab-register" data-i18n="register">注册</div>
+      </div>
+      <div id="auth-login-form">
+        <div class="form-group"><label data-i18n="username">用户名</label><input type="text" id="login-username"></div>
+        <div class="form-group"><label data-i18n="password">密码</label><input type="password" id="login-password" onkeydown="if(event.key==='Enter')doLogin()"></div>
+        <button class="btn btn-primary" style="width:100%" onclick="doLogin()" data-i18n="login_btn">登录</button>
+        <p class="text-center mt-8"><a href="#" onclick="closeAuthModal();return false" class="text-secondary" data-i18n="or_guest">或以游客身份继续</a></p>
+      </div>
+      <div id="auth-register-form" class="hidden">
+        <div class="form-group"><label data-i18n="username">用户名</label><input type="text" id="reg-username"></div>
+        <div class="form-group"><label data-i18n="email">邮箱（可选）</label><input type="email" id="reg-email"></div>
+        <div class="form-group"><label data-i18n="password">密码</label><input type="password" id="reg-password" onkeydown="if(event.key==='Enter')doRegister()"></div>
+        <button class="btn btn-primary" style="width:100%" onclick="doRegister()" data-i18n="register_btn">注册</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/js/i18n.js"></script>
+  <script src="/static/js/theme.js"></script>
+  <script src="/static/js/auth.js"></script>
+  <script src="/static/js/export.js"></script>
+  <script>
+    /* ── State ───────────────────────────────────── */
+    let currentUser = null;  // null = guest
+    let currentStep = 1;
+    let selectedYear = null;
+    let selectedClass = null;
+    let classSchedule = {};
+    let userSelections = {};
+
+    const PERIODS = [
+      { num: 1, time: "8:00-8:40" },
+      { num: 2, time: "8:45-9:25" },
+      { num: 3, time: "9:35-10:15" },
+      { num: 4, time: "10:20-11:00" },
+      { num: 5, time: "11:05-11:55" },
+      { num: 6, time: "12:00-12:40", lunch: true },
+      { num: 7, time: "12:45-13:25" },
+      { num: 8, time: "13:30-14:10" },
+      { num: 9, time: "14:15-14:55" },
+      { num: 10, time: "15:00-15:40" },
+      { num: 11, time: "15:45-16:25" }
+    ];
+
+    /* ── Init ────────────────────────────────────── */
+    async function init() {
+      // Check auth
+      try {
+        const res = await apiCall("/api/auth/me");
+        if (res.user) {
+          currentUser = res.user;
+          document.getElementById("user-info").textContent = res.user.username;
+          document.getElementById("logout-btn").classList.remove("hidden");
+        } else {
+          document.getElementById("login-btn").classList.remove("hidden");
+        }
+      } catch {
+        document.getElementById("login-btn").classList.remove("hidden");
+      }
+
+      // Load guest selections from localStorage
+      if (!currentUser) {
+        const saved = localStorage.getItem("compass7_guest");
+        if (saved) {
+          try {
+            const data = JSON.parse(saved);
+            selectedYear = data.year;
+            selectedClass = data.cls;
+            userSelections = data.selections || {};
+          } catch {}
+        }
+      }
+
+      loadYears();
+    }
+
+    /* ── Steps ───────────────────────────────────── */
+    function goToStep(step) {
+      currentStep = step;
+      for (let i = 1; i <= 4; i++) {
+        document.getElementById(`step-${i}`).classList.toggle("hidden", i !== step);
+        const stepEl = document.querySelector(`.step[data-step="${i}"]`);
+        stepEl.classList.remove("active", "completed");
+        if (i < step) stepEl.classList.add("completed");
+        if (i === step) stepEl.classList.add("active");
+      }
+    }
+
+    /* ── Auth ────────────────────────────────────── */
+    function showAuthModal() { document.getElementById("auth-modal").classList.add("active"); }
+    function closeAuthModal() { document.getElementById("auth-modal").classList.remove("active"); }
+
+    function switchAuthTab(tab) {
+      document.getElementById("tab-login").classList.toggle("active", tab === "login");
+      document.getElementById("tab-register").classList.toggle("active", tab === "register");
+      document.getElementById("auth-login-form").classList.toggle("hidden", tab !== "login");
+      document.getElementById("auth-register-form").classList.toggle("hidden", tab !== "register");
+    }
+
+    async function doLogin() {
+      try {
+        const res = await apiCall("/api/auth/login", {
+          method: "POST",
+          body: JSON.stringify({
+            username: document.getElementById("login-username").value,
+            password: document.getElementById("login-password").value
+          })
+        });
+        currentUser = res.user;
+        document.getElementById("user-info").textContent = res.user.username;
+        document.getElementById("login-btn").classList.add("hidden");
+        document.getElementById("logout-btn").classList.remove("hidden");
+        closeAuthModal();
+        showToast(t("success_save"));
+        // Load server selections
+        loadServerSelections();
+      } catch (e) { showToast(e.message, "error"); }
+    }
+
+    async function doRegister() {
+      try {
+        const res = await apiCall("/api/auth/register", {
+          method: "POST",
+          body: JSON.stringify({
+            username: document.getElementById("reg-username").value,
+            email: document.getElementById("reg-email").value,
+            password: document.getElementById("reg-password").value
+          })
+        });
+        currentUser = res.user;
+        document.getElementById("user-info").textContent = res.user.username;
+        document.getElementById("login-btn").classList.add("hidden");
+        document.getElementById("logout-btn").classList.remove("hidden");
+        closeAuthModal();
+        showToast(t("success_register"));
+        // Migrate guest selections to server
+        if (Object.keys(userSelections).length > 0 && selectedYear && selectedClass) {
+          saveSelectionsToServer();
+        }
+      } catch (e) { showToast(e.message, "error"); }
+    }
+
+    function userLogout() {
+      apiCall("/api/auth/logout", { method: "POST" });
+      currentUser = null;
+      document.getElementById("user-info").textContent = "";
+      document.getElementById("logout-btn").classList.add("hidden");
+      document.getElementById("login-btn").classList.remove("hidden");
+      location.reload();
+    }
+
+    async function loadServerSelections() {
+      if (!currentUser) return;
+      try {
+        const data = await apiCall("/api/selections");
+        if (data.year_id && data.class_id) {
+          userSelections = data.selections || {};
+          // Reload schedule if on step 3
+          if (currentStep === 3) renderUserSchedule();
+        }
+      } catch {}
+    }
+
+    /* ── Years ───────────────────────────────────── */
+    async function loadYears() {
+      const data = await apiCall("/api/years");
+      const list = document.getElementById("year-list");
+      list.innerHTML = "";
+      if (data.years.length === 0) {
+        list.innerHTML = `<p class="text-secondary" data-i18n="no_data">${t("no_data")}</p>`;
+        return;
+      }
+      data.years.forEach(y => {
+        const btn = document.createElement("button");
+        btn.className = "btn btn-secondary";
+        btn.style.margin = "4px";
+        btn.textContent = y.name;
+        btn.onclick = () => { selectedYear = y; goToStep(2); loadClasses(); };
+        list.appendChild(btn);
+      });
+    }
+
+    /* ── Classes ─────────────────────────────────── */
+    async function loadClasses() {
+      const data = await apiCall(`/api/years/${selectedYear.id}/classes`);
+      const list = document.getElementById("class-list");
+      list.innerHTML = "";
+      if (data.classes.length === 0) {
+        list.innerHTML = `<p class="text-secondary" data-i18n="no_data">${t("no_data")}</p>`;
+        return;
+      }
+      data.classes.forEach(c => {
+        const btn = document.createElement("button");
+        btn.className = "btn btn-secondary";
+        btn.style.margin = "4px";
+        btn.textContent = c.name;
+        btn.onclick = () => { selectedClass = c; goToStep(3); loadUserSchedule(); };
+        list.appendChild(btn);
+      });
+    }
+
+    /* ── User Schedule ───────────────────────────── */
+    async function loadUserSchedule() {
+      const data = await apiCall(`/api/classes/${selectedYear.id}/${selectedClass.id}/schedule`);
+      classSchedule = data.schedule || {};
+      renderUserSchedule();
+    }
+
+    function renderUserSchedule() {
+      const days = [t("monday"), t("tuesday"), t("wednesday"), t("thursday"), t("friday")];
+      const head = document.getElementById("user-schedule-head");
+      const body = document.getElementById("user-schedule-body");
+
+      head.innerHTML = `<tr><th>${t("period")}</th><th>${t("time")}</th>${days.map(d => `<th>${d}</th>`).join("")}</tr>`;
+      body.innerHTML = "";
+
+      PERIODS.forEach(p => {
+        const tr = document.createElement("tr");
+        if (p.lunch) tr.classList.add("lunch-row");
+
+        // Period label
+        const labelTd = document.createElement("td");
+        labelTd.className = "period-label";
+        const blockLabel = getBlockLabel(p.num);
+        labelTd.textContent = blockLabel || (p.lunch ? t("lunch") : `${t("period")} ${p.num}`);
+        tr.appendChild(labelTd);
+
+        // Time
+        const timeTd = document.createElement("td");
+        timeTd.className = "period-label";
+        timeTd.innerHTML = `<span class="period-time">${p.time}</span>`;
+        tr.appendChild(timeTd);
+
+        // Day cells
+        for (let d = 1; d <= 5; d++) {
+          const td = document.createElement("td");
+          td.className = "slot-cell";
+          const slot = classSchedule[String(d)] && classSchedule[String(d)][String(p.num)];
+
+          if (p.lunch) {
+            td.textContent = t("lunch");
+          } else if (slot && slot.courses && slot.courses.length > 0) {
+            const slotKey = `${d}_${p.num}`;
+            if (slot.courses.length === 1) {
+              // Only one course - auto-select
+              userSelections[slotKey] = slot.courses[0].id;
+              const tag = document.createElement("span");
+              tag.className = "course-tag selected";
+              tag.textContent = currentLang === "zh" ? slot.courses[0].name_cn : slot.courses[0].name_en;
+              td.appendChild(tag);
+            } else {
+              // Multiple courses - show dropdown
+              const select = document.createElement("select");
+              select.style.width = "100%";
+              select.style.fontSize = "0.8rem";
+              const emptyOpt = document.createElement("option");
+              emptyOpt.value = "";
+              emptyOpt.textContent = `-- ${t("unselected")} --`;
+              select.appendChild(emptyOpt);
+              slot.courses.forEach(c => {
+                const opt = document.createElement("option");
+                opt.value = c.id;
+                opt.textContent = currentLang === "zh" ? c.name_cn : c.name_en;
+                if (userSelections[slotKey] === c.id) opt.selected = true;
+                select.appendChild(opt);
+              });
+              select.onchange = () => {
+                if (select.value) userSelections[slotKey] = select.value;
+                else delete userSelections[slotKey];
+                saveSelections();
+                checkAllSelected();
+              };
+              td.appendChild(select);
+            }
+          }
+
+          tr.appendChild(td);
+        }
+        body.appendChild(tr);
+      });
+
+      checkAllSelected();
+    }
+
+    function getBlockLabel(period) {
+      for (let d = 1; d <= 5; d++) {
+        const slot = classSchedule[String(d)] && classSchedule[String(d)][String(period)];
+        if (slot && slot.block_label) return slot.block_label;
+      }
+      return null;
+    }
+
+    function checkAllSelected() {
+      let allDone = true;
+      for (let d = 1; d <= 5; d++) {
+        for (const p of PERIODS) {
+          if (p.lunch) continue;
+          const slot = classSchedule[String(d)] && classSchedule[String(d)][String(p.num)];
+          if (slot && slot.courses && slot.courses.length > 1) {
+            const key = `${d}_${p.num}`;
+            if (!userSelections[key]) { allDone = false; break; }
+          }
+        }
+        if (!allDone) break;
+      }
+      document.getElementById("to-export-btn").disabled = !allDone;
+    }
+
+    function saveSelections() {
+      if (currentUser) {
+        saveSelectionsToServer();
+      } else {
+        localStorage.setItem("compass7_guest", JSON.stringify({
+          year: selectedYear,
+          cls: selectedClass,
+          selections: userSelections
+        }));
+      }
+    }
+
+    async function saveSelectionsToServer() {
+      if (!currentUser) return;
+      try {
+        await apiCall("/api/selections", {
+          method: "POST",
+          body: JSON.stringify({
+            year_id: selectedYear.id,
+            class_id: selectedClass.id,
+            selections: userSelections
+          })
+        });
+      } catch {}
+    }
+
+    /* ── Export ───────────────────────────────────── */
+    let selectedPreset = "desktop";
+
+    function goToExport() {
+      goToStep(4);
+      renderExportPreview();
+    }
+
+    function renderExportPreview() {
+      const days = [t("monday"), t("tuesday"), t("wednesday"), t("thursday"), t("friday")];
+      const head = document.getElementById("export-preview-head");
+      const body = document.getElementById("export-preview-body");
+
+      head.innerHTML = `<tr><th>${t("period")}</th><th>${t("time")}</th>${days.map(d => `<th>${d}</th>`).join("")}</tr>`;
+      body.innerHTML = "";
+
+      PERIODS.forEach(p => {
+        const tr = document.createElement("tr");
+        if (p.lunch) tr.classList.add("lunch-row");
+
+        const labelTd = document.createElement("td");
+        labelTd.className = "period-label";
+        const bl = getBlockLabel(p.num);
+        labelTd.textContent = bl || (p.lunch ? t("lunch") : `${t("period")} ${p.num}`);
+        tr.appendChild(labelTd);
+
+        const timeTd = document.createElement("td");
+        timeTd.className = "period-label";
+        timeTd.innerHTML = `<span class="period-time">${p.time}</span>`;
+        tr.appendChild(timeTd);
+
+        for (let d = 1; d <= 5; d++) {
+          const td = document.createElement("td");
+          if (p.lunch) { td.textContent = t("lunch"); }
+          else {
+            const slot = classSchedule[String(d)] && classSchedule[String(d)][String(p.num)];
+            const courseId = userSelections[`${d}_${p.num}`];
+            if (slot && courseId) {
+              const course = slot.courses.find(c => c.id === courseId);
+              if (course) {
+                td.textContent = currentLang === "zh" ? course.name_cn : course.name_en;
+              }
+            }
+          }
+          tr.appendChild(td);
+        }
+        body.appendChild(tr);
+      });
+    }
+
+    function showExportImage() {
+      const panel = document.getElementById("image-export-panel");
+      panel.classList.toggle("hidden");
+      document.getElementById("ics-export-panel").classList.add("hidden");
+      renderPresetOptions();
+    }
+
+    function renderPresetOptions() {
+      const container = document.getElementById("preset-options");
+      container.innerHTML = "";
+      for (const [key, val] of Object.entries(IMAGE_PRESETS)) {
+        const div = document.createElement("div");
+        div.className = `export-option${selectedPreset === key ? " selected" : ""}`;
+        div.innerHTML = `<div>${t(val.label)}</div>${val.w ? `<div class="text-secondary" style="font-size:0.8rem">${val.w}×${val.h}</div>` : ""}`;
+        div.onclick = () => {
+          selectedPreset = key;
+          document.getElementById("custom-size").classList.toggle("hidden", key !== "custom");
+          renderPresetOptions();
+        };
+        container.appendChild(div);
+      }
+    }
+
+    async function previewImage() {
+      const table = document.getElementById("export-preview-table");
+      const dataUrl = await exportAsImage(table, selectedPreset,
+        document.getElementById("custom-w").value,
+        document.getElementById("custom-h").value, true);
+      const container = document.getElementById("image-preview");
+      container.innerHTML = `<img src="${dataUrl}" alt="Preview">`;
+      container.classList.remove("hidden");
+      document.getElementById("download-img-btn").classList.remove("hidden");
+    }
+
+    async function downloadImage() {
+      const table = document.getElementById("export-preview-table");
+      await exportAsImage(table, selectedPreset,
+        document.getElementById("custom-w").value,
+        document.getElementById("custom-h").value, false);
+    }
+
+    function doExportExcel() {
+      exportAsExcel(classSchedule, userSelections, selectedClass ? selectedClass.name : "timetable");
+    }
+
+    function showExportICS() {
+      const panel = document.getElementById("ics-export-panel");
+      panel.classList.toggle("hidden");
+      document.getElementById("image-export-panel").classList.add("hidden");
+    }
+
+    function doExportICS() {
+      const start = document.getElementById("ics-start").value;
+      const end = document.getElementById("ics-end").value;
+      if (!start || !end) return showToast(t("error_required"), "error");
+      exportAsICS(classSchedule, userSelections, start, end);
+    }
+
+    /* ── Language change listener ─────────────────── */
+    window.addEventListener("langchange", () => {
+      if (currentStep === 1) loadYears();
+      if (currentStep === 2) loadClasses();
+      if (currentStep === 3) renderUserSchedule();
+      if (currentStep === 4) { renderExportPreview(); renderPresetOptions(); }
+    });
+
+    /* ── Start ───────────────────────────────────── */
+    init();
+  </script>
+</body>
+</html>

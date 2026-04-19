@@ -1,0 +1,387 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Compass7 - Admin</title>
+  <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+  <header>
+    <div class="container">
+      <a href="/" class="logo">Compass7</a>
+      <div class="header-actions">
+        <span id="admin-status" class="text-secondary hidden" data-i18n="admin"></span>
+        <button class="btn-icon" id="theme-toggle" onclick="toggleTheme()">🌙</button>
+        <button class="btn btn-sm btn-secondary" onclick="toggleLang()" id="lang-toggle">EN/中</button>
+        <button class="btn btn-sm btn-secondary hidden" id="logout-btn" onclick="adminLogout()" data-i18n="logout">退出</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- Admin Login -->
+    <div id="admin-login" class="auth-container">
+      <div class="card">
+        <h2 data-i18n="admin">管理后台</h2>
+        <p id="login-hint" class="text-secondary mb-16" data-i18n="admin_password">管理员密码</p>
+        <div class="form-group">
+          <input type="password" id="admin-pwd" data-i18n-placeholder="password" placeholder="密码" onkeydown="if(event.key==='Enter')adminLogin()">
+        </div>
+        <button class="btn btn-primary" style="width:100%" onclick="adminLogin()" data-i18n="login_btn">登录</button>
+      </div>
+    </div>
+
+    <!-- Admin Panel -->
+    <div id="admin-panel" class="hidden">
+      <div class="admin-layout">
+        <!-- Sidebar -->
+        <div class="sidebar">
+          <div class="flex-between mb-8">
+            <h3 data-i18n="academic_years">学年</h3>
+            <button class="btn btn-sm btn-primary" onclick="showAddYear()">+</button>
+          </div>
+          <div id="years-list"></div>
+
+          <div class="mt-24">
+            <div class="flex-between mb-8">
+              <h3 data-i18n="classes">班级</h3>
+              <button class="btn btn-sm btn-primary" onclick="showAddClass()" id="add-class-btn" class="hidden">+</button>
+            </div>
+            <div id="classes-list"></div>
+          </div>
+        </div>
+
+        <!-- Main Content -->
+        <div id="editor-area">
+          <div class="card text-center text-secondary" id="editor-placeholder">
+            <p data-i18n="select_year">请选择学年和班级</p>
+          </div>
+
+          <!-- Schedule Editor -->
+          <div id="schedule-editor" class="hidden">
+            <div class="flex-between mb-16">
+              <h2 id="editor-title"></h2>
+              <button class="btn btn-primary" onclick="saveSchedule()" data-i18n="save">保存</button>
+            </div>
+            <div class="schedule-wrapper">
+              <table class="schedule-grid" id="admin-schedule-table">
+                <thead id="admin-schedule-head"></thead>
+                <tbody id="admin-schedule-body"></tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </main>
+
+  <!-- Modal: Add Course -->
+  <div class="modal-overlay" id="modal-overlay">
+    <div class="modal" id="modal-content">
+      <h3 id="modal-title"></h3>
+      <div id="modal-body"></div>
+      <div class="modal-actions">
+        <button class="btn btn-secondary" onclick="closeModal()" data-i18n="cancel">取消</button>
+        <button class="btn btn-primary" id="modal-save" data-i18n="save">保存</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/js/i18n.js"></script>
+  <script src="/static/js/theme.js"></script>
+  <script src="/static/js/auth.js"></script>
+  <script>
+    /* ── State ───────────────────────────────────── */
+    let selectedYear = null;
+    let selectedClass = null;
+    let scheduleData = {};
+
+    const PERIODS = [
+      { num: 1, time: "8:00-8:40" },
+      { num: 2, time: "8:45-9:25" },
+      { num: 3, time: "9:35-10:15" },
+      { num: 4, time: "10:20-11:00" },
+      { num: 5, time: "11:05-11:55" },
+      { num: 6, time: "12:00-12:40", lunch: true },
+      { num: 7, time: "12:45-13:25" },
+      { num: 8, time: "13:30-14:10" },
+      { num: 9, time: "14:15-14:55" },
+      { num: 10, time: "15:00-15:40" },
+      { num: 11, time: "15:45-16:25" }
+    ];
+
+    /* ── Admin Auth ──────────────────────────────── */
+    async function adminLogin() {
+      const pwd = document.getElementById("admin-pwd").value;
+      if (!pwd) return;
+      try {
+        const res = await apiCall("/api/admin/login", {
+          method: "POST",
+          body: JSON.stringify({ password: pwd })
+        });
+        document.getElementById("admin-login").classList.add("hidden");
+        document.getElementById("admin-panel").classList.remove("hidden");
+        document.getElementById("admin-status").classList.remove("hidden");
+        document.getElementById("logout-btn").classList.remove("hidden");
+        loadYears();
+      } catch (e) {
+        showToast(e.message, "error");
+      }
+    }
+
+    function adminLogout() {
+      apiCall("/api/admin/logout", { method: "POST" });
+      location.reload();
+    }
+
+    /* ── Years ───────────────────────────────────── */
+    async function loadYears() {
+      const data = await apiCall("/api/admin/years");
+      const list = document.getElementById("years-list");
+      list.innerHTML = "";
+      data.years.forEach(y => {
+        const div = document.createElement("div");
+        div.className = `sidebar-item${selectedYear && selectedYear.id === y.id ? " active" : ""}`;
+        div.innerHTML = `<span>${y.name}</span><button class="btn btn-sm btn-danger delete-btn" onclick="event.stopPropagation();deleteYear('${y.id}')">&times;</button>`;
+        div.onclick = () => selectYear(y);
+        list.appendChild(div);
+      });
+    }
+
+    function selectYear(year) {
+      selectedYear = year;
+      selectedClass = null;
+      document.getElementById("schedule-editor").classList.add("hidden");
+      document.getElementById("editor-placeholder").classList.remove("hidden");
+      loadYears();
+      loadClasses();
+    }
+
+    function showAddYear() {
+      showModal(t("add_year"), `<div class="form-group"><input type="text" id="new-year-name" placeholder="${t("year_name")}"></div>`, async () => {
+        const name = document.getElementById("new-year-name").value.trim();
+        if (!name) return;
+        await apiCall("/api/admin/years", { method: "POST", body: JSON.stringify({ name }) });
+        closeModal();
+        loadYears();
+      });
+    }
+
+    async function deleteYear(id) {
+      if (!confirm(t("confirm_delete"))) return;
+      await apiCall(`/api/admin/years/${id}`, { method: "DELETE" });
+      if (selectedYear && selectedYear.id === id) {
+        selectedYear = null;
+        selectedClass = null;
+      }
+      loadYears();
+      loadClasses();
+    }
+
+    /* ── Classes ─────────────────────────────────── */
+    async function loadClasses() {
+      const list = document.getElementById("classes-list");
+      if (!selectedYear) { list.innerHTML = ""; return; }
+      const data = await apiCall(`/api/admin/years/${selectedYear.id}/classes`);
+      list.innerHTML = "";
+      data.classes.forEach(c => {
+        const div = document.createElement("div");
+        div.className = `sidebar-item${selectedClass && selectedClass.id === c.id ? " active" : ""}`;
+        div.innerHTML = `<span>${c.name}</span><button class="btn btn-sm btn-danger delete-btn" onclick="event.stopPropagation();deleteClass('${c.id}')">&times;</button>`;
+        div.onclick = () => selectClass(c);
+        list.appendChild(div);
+      });
+    }
+
+    function selectClass(cls) {
+      selectedClass = cls;
+      loadClasses();
+      loadSchedule();
+    }
+
+    function showAddClass() {
+      if (!selectedYear) return showToast(t("select_year"), "error");
+      showModal(t("add_class"), `<div class="form-group"><input type="text" id="new-class-name" placeholder="${t("class_name")}"></div>`, async () => {
+        const name = document.getElementById("new-class-name").value.trim();
+        if (!name) return;
+        await apiCall(`/api/admin/years/${selectedYear.id}/classes`, { method: "POST", body: JSON.stringify({ name }) });
+        closeModal();
+        loadClasses();
+      });
+    }
+
+    async function deleteClass(id) {
+      if (!confirm(t("confirm_delete"))) return;
+      await apiCall(`/api/admin/years/${selectedYear.id}/classes/${id}`, { method: "DELETE" });
+      if (selectedClass && selectedClass.id === id) selectedClass = null;
+      loadClasses();
+    }
+
+    /* ── Schedule Editor ─────────────────────────── */
+    async function loadSchedule() {
+      if (!selectedYear || !selectedClass) return;
+      const data = await apiCall(`/api/admin/classes/${selectedYear.id}/${selectedClass.id}/schedule`);
+      scheduleData = data.schedule || {};
+      document.getElementById("editor-placeholder").classList.add("hidden");
+      document.getElementById("schedule-editor").classList.remove("hidden");
+      document.getElementById("editor-title").textContent = `${selectedYear.name} - ${selectedClass.name}`;
+      renderScheduleGrid();
+    }
+
+    function renderScheduleGrid() {
+      const days = [t("monday"), t("tuesday"), t("wednesday"), t("thursday"), t("friday")];
+      const head = document.getElementById("admin-schedule-head");
+      const body = document.getElementById("admin-schedule-body");
+
+      head.innerHTML = `<tr><th>${t("period")}</th><th>${t("time")}</th>${days.map((d, i) => `<th>${d}</th>`).join("")}</tr>`;
+      body.innerHTML = "";
+
+      PERIODS.forEach(p => {
+        const tr = document.createElement("tr");
+        if (p.lunch) tr.classList.add("lunch-row");
+
+        // Period label cell
+        const labelTd = document.createElement("td");
+        labelTd.className = "period-label";
+        const blockLabel = getBlockLabel(p.num);
+        if (blockLabel) {
+          labelTd.innerHTML = `<span class="block-label" onclick="editBlockLabel(${p.num})">${blockLabel}</span>`;
+        } else {
+          labelTd.innerHTML = p.lunch
+            ? t("lunch")
+            : `<span class="block-label" onclick="editBlockLabel(${p.num})">${t("period")} ${p.num}</span>`;
+        }
+        tr.appendChild(labelTd);
+
+        // Time cell
+        const timeTd = document.createElement("td");
+        timeTd.className = "period-label";
+        timeTd.innerHTML = `<span class="period-time">${p.time}</span>`;
+        tr.appendChild(timeTd);
+
+        // Day cells
+        for (let d = 1; d <= 5; d++) {
+          const td = document.createElement("td");
+          td.className = "slot-cell";
+          const slot = (scheduleData[String(d)] && scheduleData[String(d)][String(p.num)]) || { courses: [] };
+
+          slot.courses.forEach((c, idx) => {
+            const tag = document.createElement("span");
+            tag.className = "course-tag";
+            tag.textContent = currentLang === "zh" ? c.name_cn : c.name_en;
+            tag.onclick = () => editCourse(d, p.num, idx);
+            td.appendChild(tag);
+          });
+
+          if (!p.lunch) {
+            const addBtn = document.createElement("button");
+            addBtn.className = "add-course-btn";
+            addBtn.textContent = "+ " + t("add_course");
+            addBtn.onclick = () => addCourse(d, p.num);
+            td.appendChild(addBtn);
+          }
+
+          tr.appendChild(td);
+        }
+        body.appendChild(tr);
+      });
+    }
+
+    function getBlockLabel(period) {
+      // Check any day for a block label on this period
+      for (let d = 1; d <= 5; d++) {
+        const slot = scheduleData[String(d)] && scheduleData[String(d)][String(period)];
+        if (slot && slot.block_label) return slot.block_label;
+      }
+      return null;
+    }
+
+    function editBlockLabel(period) {
+      const current = getBlockLabel(period) || "";
+      showModal(t("block_label"), `<div class="form-group"><input type="text" id="block-label-input" value="${current}" placeholder="${t("block_label")}"></div>`, () => {
+        const label = document.getElementById("block-label-input").value.trim() || null;
+        for (let d = 1; d <= 5; d++) {
+          if (!scheduleData[String(d)]) scheduleData[String(d)] = {};
+          if (!scheduleData[String(d)][String(period)]) scheduleData[String(d)][String(period)] = { block_label: null, courses: [] };
+          scheduleData[String(d)][String(period)].block_label = label;
+        }
+        closeModal();
+        renderScheduleGrid();
+      });
+    }
+
+    function addCourse(day, period) {
+      showModal(t("add_course"), `
+        <div class="form-group"><label>${t("course_name_cn")}</label><input type="text" id="course-cn"></div>
+        <div class="form-group"><label>${t("course_name_en")}</label><input type="text" id="course-en"></div>
+      `, () => {
+        const cn = document.getElementById("course-cn").value.trim();
+        const en = document.getElementById("course-en").value.trim();
+        if (!cn || !en) return showToast(t("error_required"), "error");
+        if (!scheduleData[String(day)]) scheduleData[String(day)] = {};
+        if (!scheduleData[String(day)][String(period)]) scheduleData[String(day)][String(period)] = { block_label: null, courses: [] };
+        scheduleData[String(day)][String(period)].courses.push({
+          id: Math.random().toString(36).substr(2, 8),
+          name_cn: cn,
+          name_en: en
+        });
+        closeModal();
+        renderScheduleGrid();
+      });
+    }
+
+    function editCourse(day, period, idx) {
+      const slot = scheduleData[String(day)][String(period)];
+      const course = slot.courses[idx];
+      showModal(t("edit"), `
+        <div class="form-group"><label>${t("course_name_cn")}</label><input type="text" id="course-cn" value="${course.name_cn}"></div>
+        <div class="form-group"><label>${t("course_name_en")}</label><input type="text" id="course-en" value="${course.name_en}"></div>
+        <button class="btn btn-danger mt-16" onclick="deleteCourse(${day},${period},${idx})">${t("delete")}</button>
+      `, () => {
+        course.name_cn = document.getElementById("course-cn").value.trim();
+        course.name_en = document.getElementById("course-en").value.trim();
+        closeModal();
+        renderScheduleGrid();
+      });
+    }
+
+    function deleteCourse(day, period, idx) {
+      scheduleData[String(day)][String(period)].courses.splice(idx, 1);
+      closeModal();
+      renderScheduleGrid();
+    }
+
+    async function saveSchedule() {
+      try {
+        await apiCall(`/api/admin/classes/${selectedYear.id}/${selectedClass.id}/schedule`, {
+          method: "PUT",
+          body: JSON.stringify({ schedule: scheduleData })
+        });
+        showToast(t("success_save"));
+      } catch (e) {
+        showToast(e.message, "error");
+      }
+    }
+
+    /* ── Modal ───────────────────────────────────── */
+    function showModal(title, bodyHtml, onSave) {
+      document.getElementById("modal-title").textContent = title;
+      document.getElementById("modal-body").innerHTML = bodyHtml;
+      document.getElementById("modal-save").onclick = onSave;
+      document.getElementById("modal-overlay").classList.add("active");
+    }
+
+    function closeModal() {
+      document.getElementById("modal-overlay").classList.remove("active");
+    }
+
+    /* ── Language change listener ─────────────────── */
+    window.addEventListener("langchange", () => {
+      if (selectedClass) renderScheduleGrid();
+      document.getElementById("editor-title").textContent =
+        selectedYear && selectedClass ? `${selectedYear.name} - ${selectedClass.name}` : "";
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,59 @@
+name: Test
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  unit-and-api:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install azure-storage-blob
+
+      - name: Run unit tests
+        run: pytest tests/test_storage.py -v -m unit
+
+      - name: Run API tests
+        run: pytest tests/test_api_*.py -v -m api
+
+  e2e:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install azure-storage-blob
+          playwright install chromium
+          playwright install-deps chromium
+
+      - name: Start server
+        run: |
+          python app.py &
+          sleep 3
+        env:
+          AZURE_STORAGE_CONNECTION_STRING: "mock"
+          PYTHONDONTWRITEBYTECODE: "1"
+
+      - name: Run E2E tests
+        run: pytest tests/e2e/ -v -m e2e
+        env:
+          BASE_URL: http://localhost:8000
