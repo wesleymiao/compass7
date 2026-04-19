@@ -85,6 +85,10 @@ const I18N = {
     semester_end: "学期结束日期",
     generate_ics: "生成日历文件",
 
+    // Admin Export
+    export_schedule: "导出课表",
+    export_all_schedules: "导出所有课表",
+
     // Messages
     error_required: "此项为必填",
     error_login: "用户名或密码错误",
@@ -172,6 +176,9 @@ const I18N = {
     semester_start: "Semester Start Date",
     semester_end: "Semester End Date",
     generate_ics: "Generate Calendar File",
+
+    export_schedule: "Export Schedule",
+    export_all_schedules: "Export All Schedules",
 
     error_required: "This field is required",
     error_login: "Invalid username or password",

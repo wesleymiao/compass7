@@ -5,6 +5,8 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Compass7 - Admin</title>
   <link rel="stylesheet" href="/static/css/style.css">
+  <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/html2canvas@1.4.1/dist/html2canvas.min.js"></script>
 </head>
 <body>
   <header>
@@ -50,6 +52,10 @@
             </div>
             <div id="classes-list"></div>
           </div>
+
+          <div class="mt-24">
+            <button class="btn btn-secondary" style="width:100%" onclick="exportAllSchedules()" id="export-all-btn" data-i18n="export_all_schedules">导出所有课表</button>
+          </div>
         </div>
 
         <!-- Main Content -->
@@ -62,7 +68,11 @@
           <div id="schedule-editor" class="hidden">
             <div class="flex-between mb-16">
               <h2 id="editor-title"></h2>
-              <button class="btn btn-primary" onclick="saveSchedule()" data-i18n="save">保存</button>
+              <div>
+                <button class="btn btn-secondary" onclick="exportScheduleExcel()" id="export-excel-btn" data-i18n="export_excel">导出为 Excel</button>
+                <button class="btn btn-secondary" onclick="exportScheduleImage()" id="export-img-btn" data-i18n="export_image">导出为图片</button>
+                <button class="btn btn-primary" onclick="saveSchedule()" data-i18n="save">保存</button>
+              </div>
             </div>
             <div class="schedule-wrapper">
               <table class="schedule-grid" id="admin-schedule-table">
@@ -358,6 +368,80 @@
           method: "PUT",
           body: JSON.stringify({ schedule: scheduleData })
         });
+        showToast(t("success_save"));
+      } catch (e) {
+        showToast(e.message, "error");
+      }
+    }
+
+    /* ── Export ──────────────────────────────────── */
+    function scheduleToRows(schedule, title) {
+      const days = [t("monday"), t("tuesday"), t("wednesday"), t("thursday"), t("friday")];
+      const rows = [[title || ""], ["", ...days]];
+      PERIODS.forEach(p => {
+        const label = getBlockLabel(p.num) || (p.lunch ? t("lunch") : `P${p.num} (${p.time})`);
+        const row = [label];
+        for (let d = 1; d <= 5; d++) {
+          const slot = schedule[String(d)] && schedule[String(d)][String(p.num)];
+          if (slot && slot.courses && slot.courses.length > 0) {
+            row.push(slot.courses.map(c => currentLang === "zh" ? c.name_cn : c.name_en).join(" / "));
+          } else {
+            row.push(p.lunch ? t("lunch") : "");
+          }
+        }
+        rows.push(row);
+      });
+      return rows;
+    }
+
+    function exportScheduleExcel() {
+      if (!selectedYear || !selectedClass || !scheduleData) return showToast(t("select_year"), "error");
+      const title = `${selectedYear.name} - ${selectedClass.name}`;
+      const rows = scheduleToRows(scheduleData, title);
+      const ws = XLSX.utils.aoa_to_sheet(rows);
+      const wb = XLSX.utils.book_new();
+      XLSX.utils.book_append_sheet(wb, ws, selectedClass.name);
+      XLSX.writeFile(wb, `compass7_${selectedYear.name}_${selectedClass.name}.xlsx`);
+      showToast(t("success_save"));
+    }
+
+    async function exportScheduleImage() {
+      if (!selectedYear || !selectedClass) return showToast(t("select_year"), "error");
+      const table = document.getElementById("admin-schedule-table");
+      try {
+        const canvas = await html2canvas(table, {
+          scale: 2,
+          backgroundColor: getComputedStyle(document.documentElement).getPropertyValue("--bg").trim()
+        });
+        const link = document.createElement("a");
+        link.download = `compass7_${selectedYear.name}_${selectedClass.name}.png`;
+        link.href = canvas.toDataURL("image/png");
+        link.click();
+        showToast(t("success_save"));
+      } catch (e) {
+        showToast(e.message, "error");
+      }
+    }
+
+    async function exportAllSchedules() {
+      try {
+        const yearsData = await apiCall("/api/admin/years");
+        if (!yearsData.years.length) return showToast(t("no_data"), "error");
+
+        const wb = XLSX.utils.book_new();
+        for (const year of yearsData.years) {
+          const classesData = await apiCall(`/api/admin/years/${year.id}/classes`);
+          for (const cls of classesData.classes) {
+            const schedData = await apiCall(`/api/admin/classes/${year.id}/${cls.id}/schedule`);
+            const schedule = schedData.schedule || {};
+            const title = `${year.name} - ${cls.name}`;
+            const rows = scheduleToRows(schedule, title);
+            const ws = XLSX.utils.aoa_to_sheet(rows);
+            const sheetName = `${year.name}-${cls.name}`.substring(0, 31);
+            XLSX.utils.book_append_sheet(wb, ws, sheetName);
+          }
+        }
+        XLSX.writeFile(wb, `compass7_all_schedules.xlsx`);
         showToast(t("success_save"));
       } catch (e) {
         showToast(e.message, "error");
