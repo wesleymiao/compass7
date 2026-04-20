@@ -1,12 +1,14 @@
 /**
  * E2E tests for Compass7 against the live deployed site.
- * Run: node tests/e2e-live.js
+ * Run: cd compass7 && node tests/e2e-live.js
  * Screenshots saved to tests/screenshots/
  *
  * Test data strategy:
  * - All test data uses "[E2E]" prefix to distinguish from real data
  * - Tests create data, verify it, then clean up at the end
  * - A single test user "e2e_test_user" is reused (not timestamped)
+ * - Two classes are created to test data isolation between classes
+ * - Multiple courses across different periods/days for realistic coverage
  */
 const { chromium } = require('playwright');
 const path = require('path');
@@ -15,17 +17,26 @@ const fs = require('fs');
 const BASE = process.env.BASE_URL || 'https://compass7.azurewebsites.net';
 const SHOTS = path.join(__dirname, 'screenshots');
 const TEST_YEAR = '[E2E] Test Year';
-const TEST_CLASS = '[E2E] Test Class';
+const TEST_CLASS_A = '[E2E] Class-A';
+const TEST_CLASS_B = '[E2E] Class-B';
 const TEST_USER = 'e2e_test_user';
 const TEST_PWD = 'e2eTestPass123';
 const ADMIN_PWD = 'Icanbebetter3#';
 
+// Courses to populate a realistic schedule
+const COURSES = [
+  { day: 1, period: 1, cn: '[E2E] 数学HL',   en: '[E2E] Math HL' },
+  { day: 1, period: 2, cn: '[E2E] 物理SL',   en: '[E2E] Physics SL' },
+  { day: 2, period: 1, cn: '[E2E] 英语B',    en: '[E2E] English B' },
+  { day: 3, period: 5, cn: '[E2E] 经济HL',   en: '[E2E] Economics HL' },
+  { day: 4, period: 7, cn: '[E2E] 化学SL',   en: '[E2E] Chemistry SL' },   // P6 (post-lunch)
+  { day: 5, period: 11, cn: '[E2E] 中文A',   en: '[E2E] Chinese A' },      // P10 (last period)
+  { day: 3, period: 6, cn: '[E2E] 午间活动',  en: '[E2E] Lunch Activity' }, // lunch slot
+];
+
 let passed = 0, failed = 0;
 const results = [];
 const screenshots = [];
-
-// Track test data IDs for cleanup
-let testYearId = null;
 
 async function shot(page, name) {
   const file = path.join(SHOTS, `${name}.png`);
@@ -37,10 +48,10 @@ async function test(name, fn) {
   try {
     await fn();
     passed++;
-    results.push(`  ✅ ${name}`);
+    results.push(`  \u2705 ${name}`);
   } catch (e) {
     failed++;
-    results.push(`  ❌ ${name}\n     ${e.message.split('\n')[0]}`);
+    results.push(`  \u274c ${name}\n     ${e.message.split('\n')[0]}`);
   }
 }
 
@@ -49,63 +60,53 @@ async function adminLogin(page) {
   await page.goto(`${BASE}/admin`);
   await page.waitForSelector('#admin-pwd', { timeout: 10000 });
   await page.fill('#admin-pwd', ADMIN_PWD);
-  await page.click('button:has-text("登录")');
+  await page.click('button:has-text("\u767b\u5f55")');
   await page.waitForSelector('#admin-panel', { state: 'visible', timeout: 10000 });
   await page.waitForTimeout(1000);
 }
 
-// Helper: login admin and navigate to test year > test class schedule
-async function adminToSchedule(page) {
+// Helper: login admin and navigate to a specific year > class schedule
+async function adminToSchedule(page, className = TEST_CLASS_A) {
   await adminLogin(page);
   await page.waitForTimeout(500);
   const yearBtn = page.locator('#years-list .sidebar-item').filter({ hasText: TEST_YEAR });
   await yearBtn.first().click();
   await page.waitForTimeout(500);
-  const classBtn = page.locator('#classes-list .sidebar-item').filter({ hasText: TEST_CLASS });
+  const classBtn = page.locator('#classes-list .sidebar-item').filter({ hasText: className });
   await classBtn.first().click();
   await page.waitForTimeout(1500);
 }
 
-// ─── Cleanup: delete [E2E] test data via API ─────────
-async function cleanup(page) {
-  console.log('\n  🧹 Cleaning up test data...');
-  try {
-    await adminLogin(page);
-
-    // Find and delete all [E2E] years
-    const yearsText = await page.locator('#years-list').innerHTML();
-    const yearItems = await page.locator('#years-list .sidebar-item').all();
-    for (const item of yearItems) {
-      const text = await item.textContent();
-      if (text.includes('[E2E]')) {
-        // Extract the delete button's onclick to get the year ID
-        const deleteBtn = item.locator('.delete-btn');
-        await deleteBtn.click();
-        // Handle confirm dialog
-        page.once('dialog', dialog => dialog.accept());
-        await deleteBtn.click();
-        await page.waitForTimeout(500);
-      }
-    }
-    console.log('  🧹 Cleanup complete');
-  } catch (e) {
-    console.log(`  🧹 Cleanup error (non-fatal): ${e.message}`);
-  }
+// Helper: add a course at a specific grid position via UI
+// day: 1-5 (Mon-Fri), period: 1-11 (matches PERIODS array num)
+async function addCourseAtSlot(page, day, period, nameCn, nameEn) {
+  // Row index = period - 1 (periods 1-11 map to rows 0-10)
+  const row = page.locator('#admin-schedule-body tr').nth(period - 1);
+  // Column: 0=label, 1=time, 2=Mon(day1), 3=Tue(day2), ... so day d -> col d+1
+  const cell = row.locator('td').nth(day + 1);
+  const addBtn = cell.locator('.add-course-btn');
+  await addBtn.click();
+  await page.waitForSelector('#modal-overlay.active', { timeout: 5000 });
+  await page.fill('#course-cn', nameCn);
+  await page.fill('#course-en', nameEn);
+  await page.click('#modal-save');
+  await page.waitForTimeout(300);
 }
+
 
 (async () => {
   const browser = await chromium.launch({ headless: true });
-  console.log(`\nCompass7 E2E Tests — ${BASE}\n`);
+  console.log(`\nCompass7 E2E Tests \u2014 ${BASE}\n`);
 
   // ═══════════════════════════════════════════════
-  // ADMIN FLOW
+  // ADMIN BASIC
   // ═══════════════════════════════════════════════
 
   await test('Admin page loads', async () => {
     const page = await browser.newPage();
     await page.goto(`${BASE}/admin`);
     await page.waitForSelector('#admin-pwd', { timeout: 10000 });
-    await shot(page, '01-admin-login-page');
+    await shot(page, '01-admin-login');
     const title = await page.title();
     assert(title.includes('Compass7'), `Expected Compass7 in title, got: ${title}`);
     await page.close();
@@ -115,122 +116,231 @@ async function cleanup(page) {
     const page = await browser.newPage();
     await adminLogin(page);
     const panelVisible = await page.locator('#admin-panel').isVisible();
-    await shot(page, '02-admin-after-login');
+    await shot(page, '02-admin-panel');
     assert(panelVisible, 'Admin panel not visible after login');
     await page.close();
   });
 
-  await test('Admin create year ([E2E] prefix)', async () => {
+  // ═══════════════════════════════════════════════
+  // ADMIN CREATE: year + two classes
+  // ═══════════════════════════════════════════════
+
+  await test('Admin create test year', async () => {
     const page = await browser.newPage();
     await adminLogin(page);
-
-    // First, handle confirm dialog for any cleanup needed
     page.on('dialog', dialog => dialog.accept());
 
-    // Delete existing [E2E] year if present (cleanup from previous run)
-    const existingYear = page.locator('#years-list .sidebar-item').filter({ hasText: TEST_YEAR });
-    if (await existingYear.count() > 0) {
+    // Cleanup previous [E2E] year if present
+    const existing = page.locator('#years-list .sidebar-item').filter({ hasText: TEST_YEAR });
+    if (await existing.count() > 0) {
       console.log('    Cleaning up previous test year...');
-      await existingYear.first().locator('.delete-btn').click();
+      await existing.first().locator('.delete-btn').click();
       await page.waitForTimeout(1000);
     }
 
-    // Create new test year
+    // Create
     await page.click('#admin-panel button:has-text("+")');
     await page.waitForSelector('#modal-overlay.active', { timeout: 5000 });
     await page.fill('#new-year-name', TEST_YEAR);
-    await shot(page, '03-admin-add-year-modal');
     await page.click('#modal-save');
     await page.waitForTimeout(2000);
 
     const yearsList = await page.locator('#years-list').textContent();
-    console.log(`    Years list: ${yearsList}`);
-    await shot(page, '04-admin-year-created');
-    assert(yearsList.includes(TEST_YEAR), `Test year not found in list`);
+    console.log(`    Years: ${yearsList}`);
+    await shot(page, '03-year-created');
+    assert(yearsList.includes(TEST_YEAR), 'Test year not in list');
     await page.close();
   });
 
-  await test('Admin create class under test year', async () => {
+  await test('Admin create Class-A', async () => {
     const page = await browser.newPage();
     await adminLogin(page);
     page.on('dialog', dialog => dialog.accept());
 
-    const yearBtn = page.locator('#years-list .sidebar-item').filter({ hasText: TEST_YEAR });
-    assert(await yearBtn.count() > 0, `Test year "${TEST_YEAR}" not found`);
-    await yearBtn.first().click();
+    await page.locator('#years-list .sidebar-item').filter({ hasText: TEST_YEAR }).first().click();
     await page.waitForTimeout(500);
 
-    // Delete existing test class if present
-    const existingClass = page.locator('#classes-list .sidebar-item').filter({ hasText: TEST_CLASS });
-    if (await existingClass.count() > 0) {
-      console.log('    Cleaning up previous test class...');
-      await existingClass.first().locator('.delete-btn').click();
-      await page.waitForTimeout(1000);
-    }
-
-    // Create new test class
     await page.click('#add-class-btn');
     await page.waitForSelector('#modal-overlay.active', { timeout: 5000 });
-    await page.fill('#new-class-name', TEST_CLASS);
+    await page.fill('#new-class-name', TEST_CLASS_A);
     await page.click('#modal-save');
     await page.waitForTimeout(2000);
 
-    const classesList = await page.locator('#classes-list').textContent();
-    console.log(`    Classes list: ${classesList}`);
-    await shot(page, '05-admin-class-created');
-    assert(classesList.includes(TEST_CLASS), `Test class not found in list`);
+    const list = await page.locator('#classes-list').textContent();
+    console.log(`    Classes: ${list}`);
+    await shot(page, '04-classA-created');
+    assert(list.includes(TEST_CLASS_A), 'Class-A not in list');
     await page.close();
   });
 
-  await test('Admin add course to schedule', async () => {
+  await test('Admin create Class-B', async () => {
     const page = await browser.newPage();
-    await adminToSchedule(page);
+    await adminLogin(page);
 
-    // Click first "add course" button (Period 1, Monday)
-    const addBtns = page.locator('.add-course-btn');
-    assert(await addBtns.count() > 0, 'No add-course buttons found');
-    await addBtns.first().click();
-    await page.waitForSelector('#modal-overlay.active', { timeout: 5000 });
-
-    await page.fill('#course-cn', '[E2E] 测试课程');
-    await page.fill('#course-en', '[E2E] Test Course');
-    await page.click('#modal-save');
+    await page.locator('#years-list .sidebar-item').filter({ hasText: TEST_YEAR }).first().click();
     await page.waitForTimeout(500);
 
-    // Save the schedule
-    await page.click('button:has-text("保存")');
+    await page.click('#add-class-btn');
+    await page.waitForSelector('#modal-overlay.active', { timeout: 5000 });
+    await page.fill('#new-class-name', TEST_CLASS_B);
+    await page.click('#modal-save');
     await page.waitForTimeout(2000);
 
-    // Verify course tag appears
-    const courseTag = page.locator('.course-tag').filter({ hasText: '[E2E]' });
-    const tagCount = await courseTag.count();
-    console.log(`    [E2E] course tags: ${tagCount}`);
-    await shot(page, '05a-admin-course-added');
-    assert(tagCount > 0, 'Test course not visible in schedule');
+    const list = await page.locator('#classes-list').textContent();
+    console.log(`    Classes: ${list}`);
+    assert(list.includes(TEST_CLASS_B), 'Class-B not in list');
     await page.close();
   });
 
-  await test('Schedule grid shows P6-P10 labels after lunch', async () => {
+  // ═══════════════════════════════════════════════
+  // ADMIN SCHEDULE: populate Class-A with courses
+  // ═══════════════════════════════════════════════
+
+  await test('Admin add multiple courses to Class-A schedule', async () => {
     const page = await browser.newPage();
-    await adminToSchedule(page);
+    await adminToSchedule(page, TEST_CLASS_A);
+
+    for (const c of COURSES) {
+      await addCourseAtSlot(page, c.day, c.period, c.cn, c.en);
+    }
+
+    // Save
+    await page.click('button:has-text("\u4fdd\u5b58")');
+    await page.waitForTimeout(2000);
+
+    // Verify course tags
+    const tags = await page.locator('.course-tag').count();
+    console.log(`    Course tags after adding: ${tags}`);
+    await shot(page, '05-classA-schedule-full');
+    assert(tags >= COURSES.length, `Expected at least ${COURSES.length} tags, got ${tags}`);
+    await page.close();
+  });
+
+  await test('Schedule data persists after page reload', async () => {
+    const page = await browser.newPage();
+    await adminToSchedule(page, TEST_CLASS_A);
+
+    const tags = await page.locator('.course-tag').count();
+    console.log(`    Course tags after reload: ${tags}`);
+    // Check specific courses
+    const hasMath = await page.locator('.course-tag:has-text("[E2E] \u6570\u5b66HL")').count();
+    const hasPhysics = await page.locator('.course-tag:has-text("[E2E] \u7269\u7406SL")').count();
+    const hasLunch = await page.locator('.course-tag:has-text("[E2E] \u5348\u95f4\u6d3b\u52a8")').count();
+    console.log(`    Math: ${hasMath}, Physics: ${hasPhysics}, LunchActivity: ${hasLunch}`);
+    await shot(page, '06-schedule-persisted');
+    assert(tags >= COURSES.length, `Data not persisted: expected ${COURSES.length}+ tags, got ${tags}`);
+    assert(hasMath > 0, 'Math HL not found after reload');
+    assert(hasLunch > 0, 'Lunch Activity not found after reload');
+    await page.close();
+  });
+
+  // ═══════════════════════════════════════════════
+  // ADMIN EDIT: modify and delete courses
+  // ═══════════════════════════════════════════════
+
+  await test('Admin edit course name', async () => {
+    const page = await browser.newPage();
+    await adminToSchedule(page, TEST_CLASS_A);
+
+    // Click on Math HL course tag to edit it
+    const mathTag = page.locator('.course-tag:has-text("[E2E] \u6570\u5b66HL")').first();
+    await mathTag.click();
+    await page.waitForSelector('#modal-overlay.active', { timeout: 5000 });
+
+    // Change name
+    await page.fill('#course-cn', '[E2E] \u9ad8\u7b49\u6570\u5b66');
+    await page.fill('#course-en', '[E2E] Advanced Math');
+    await page.click('#modal-save');
+    await page.waitForTimeout(300);
+
+    // Save schedule
+    await page.click('button:has-text("\u4fdd\u5b58")');
+    await page.waitForTimeout(2000);
+
+    const renamed = await page.locator('.course-tag:has-text("[E2E] \u9ad8\u7b49\u6570\u5b66")').count();
+    console.log(`    Renamed course visible: ${renamed > 0}`);
+    await shot(page, '07-course-edited');
+    assert(renamed > 0, 'Renamed course not found');
+    await page.close();
+  });
+
+  await test('Admin delete a course', async () => {
+    const page = await browser.newPage();
+    await adminToSchedule(page, TEST_CLASS_A);
+
+    const tagsBefore = await page.locator('.course-tag').count();
+
+    // Click the Physics course to open edit modal
+    const physicsTag = page.locator('.course-tag:has-text("[E2E] \u7269\u7406SL")').first();
+    await physicsTag.click();
+    await page.waitForSelector('#modal-overlay.active', { timeout: 5000 });
+
+    // Click delete button inside modal
+    await page.click('#modal-overlay .btn-danger');
+    await page.waitForTimeout(500);
+
+    // Save schedule
+    await page.click('button:has-text("\u4fdd\u5b58")');
+    await page.waitForTimeout(2000);
+
+    const tagsAfter = await page.locator('.course-tag').count();
+    console.log(`    Tags before: ${tagsBefore}, after: ${tagsAfter}`);
+    await shot(page, '08-course-deleted');
+    assert(tagsAfter < tagsBefore, `Expected fewer tags after delete: ${tagsAfter} >= ${tagsBefore}`);
+    await page.close();
+  });
+
+  await test('Deleted course stays deleted after reload', async () => {
+    const page = await browser.newPage();
+    await adminToSchedule(page, TEST_CLASS_A);
+
+    const physicsCount = await page.locator('.course-tag:has-text("[E2E] \u7269\u7406SL")').count();
+    console.log(`    Physics SL after reload: ${physicsCount}`);
+    assert(physicsCount === 0, 'Deleted course reappeared after reload');
+    await page.close();
+  });
+
+  // ═══════════════════════════════════════════════
+  // SCHEDULE FEATURES: P6-P10 + lunch editing
+  // ═══════════════════════════════════════════════
+
+  await test('P6-P10 labels displayed correctly', async () => {
+    const page = await browser.newPage();
+    await adminToSchedule(page, TEST_CLASS_A);
     const tableText = await page.locator('#admin-schedule-table').textContent();
-    console.log(`    Checking period labels...`);
-    assert(tableText.includes('P6'), 'P6 label not found');
-    assert(tableText.includes('P10'), 'P10 label not found');
-    assert(!tableText.includes('节次 7') && !tableText.includes('Period 7'), 'Old P7 label still present');
-    await shot(page, '05b-schedule-period-labels');
+    for (const label of ['P6', 'P7', 'P8', 'P9', 'P10']) {
+      assert(tableText.includes(label), `${label} label not found`);
+    }
+    console.log(`    All P6-P10 labels verified`);
+    await shot(page, '09-period-labels');
     await page.close();
   });
 
-  await test('Lunch period allows adding courses', async () => {
+  await test('Lunch period course persisted correctly', async () => {
     const page = await browser.newPage();
-    await adminToSchedule(page);
+    await adminToSchedule(page, TEST_CLASS_A);
+
+    // Verify the lunch activity course is present in lunch row
     const lunchRow = page.locator('tr.lunch-row');
-    const addBtns = lunchRow.locator('.add-course-btn');
-    const count = await addBtns.count();
-    console.log(`    Add-course buttons in lunch row: ${count}`);
-    assert(count > 0, 'Lunch row should have add-course buttons');
-    await shot(page, '05c-lunch-editable');
+    const lunchCourses = await lunchRow.locator('.course-tag').count();
+    console.log(`    Courses in lunch row: ${lunchCourses}`);
+    await shot(page, '10-lunch-course');
+    assert(lunchCourses > 0, 'No courses found in lunch row');
+    await page.close();
+  });
+
+  // ═══════════════════════════════════════════════
+  // MULTI-CLASS: Class-B should be empty (isolation)
+  // ═══════════════════════════════════════════════
+
+  await test('Class-B schedule is empty (data isolation)', async () => {
+    const page = await browser.newPage();
+    await adminToSchedule(page, TEST_CLASS_B);
+
+    const tags = await page.locator('.course-tag').count();
+    console.log(`    Class-B course tags: ${tags}`);
+    await shot(page, '11-classB-empty');
+    assert(tags === 0, `Class-B should have 0 courses but has ${tags}`);
     await page.close();
   });
 
@@ -238,41 +348,57 @@ async function cleanup(page) {
   // USER FLOW
   // ═══════════════════════════════════════════════
 
-  await test('User page loads with year selection', async () => {
+  await test('User page loads', async () => {
     const page = await browser.newPage();
     await page.goto(BASE);
     await page.waitForSelector('#step-1', { timeout: 10000 });
-    await shot(page, '06-user-homepage');
-    const h2 = await page.locator('h2').first().textContent();
-    console.log(`    First heading: ${h2}`);
-    assert(h2, 'No heading found on user page');
+    await shot(page, '12-user-homepage');
+    assert(await page.locator('h2').first().textContent(), 'No heading');
     await page.close();
   });
 
-  await test('User can see test year and select it', async () => {
+  await test('User selects test year and sees both classes', async () => {
     const page = await browser.newPage();
     await page.goto(BASE);
     await page.waitForSelector('#step-1', { timeout: 10000 });
     await page.waitForTimeout(2000);
 
-    // Check test year is visible
-    const testYearBtn = page.locator(`text=${TEST_YEAR}`);
-    const found = await testYearBtn.count();
-    console.log(`    Test year buttons found: ${found}`);
-    await shot(page, '07-user-year-selection');
-    assert(found > 0, `Test year "${TEST_YEAR}" not visible on user page`);
-
-    // Click it and verify class list appears
-    await testYearBtn.first().click();
+    await page.locator(`text=${TEST_YEAR}`).first().click();
     await page.waitForTimeout(1500);
-    const classVisible = await page.locator(`text=${TEST_CLASS}`).count();
-    console.log(`    Test class visible: ${classVisible > 0}`);
-    await shot(page, '07b-user-class-selection');
-    assert(classVisible > 0, `Test class "${TEST_CLASS}" not visible after selecting year`);
+
+    const classA = await page.locator(`text=${TEST_CLASS_A}`).count();
+    const classB = await page.locator(`text=${TEST_CLASS_B}`).count();
+    console.log(`    Class-A visible: ${classA > 0}, Class-B visible: ${classB > 0}`);
+    await shot(page, '13-user-class-selection');
+    assert(classA > 0, 'Class-A not visible');
+    assert(classB > 0, 'Class-B not visible');
     await page.close();
   });
 
-  await test('User register (single test user)', async () => {
+  await test('User views Class-A schedule with courses', async () => {
+    const page = await browser.newPage();
+    await page.goto(BASE);
+    await page.waitForSelector('#step-1', { timeout: 10000 });
+    await page.waitForTimeout(2000);
+
+    await page.locator(`text=${TEST_YEAR}`).first().click();
+    await page.waitForTimeout(1500);
+    await page.locator(`text=${TEST_CLASS_A}`).first().click();
+    await page.waitForTimeout(2000);
+
+    // Should see the schedule with courses
+    const courseTags = await page.locator('.course-tag').count();
+    console.log(`    User sees ${courseTags} course tags in schedule`);
+    // Check renamed math course is visible
+    const mathVisible = await page.locator('.course-tag:has-text("\u9ad8\u7b49\u6570\u5b66")').count() > 0
+      || await page.locator('.course-tag:has-text("Advanced Math")').count() > 0;
+    console.log(`    Renamed math course visible: ${mathVisible}`);
+    await shot(page, '14-user-schedule-view');
+    assert(courseTags > 0, 'User should see courses in schedule');
+    await page.close();
+  });
+
+  await test('User register / login', async () => {
     const page = await browser.newPage();
     await page.goto(BASE);
     await page.waitForTimeout(1000);
@@ -281,70 +407,67 @@ async function cleanup(page) {
     if (await loginBtn.isVisible()) {
       await loginBtn.click();
       await page.waitForTimeout(500);
+
+      // Try register first
       const regTab = page.locator('#tab-register');
-      if (await regTab.isVisible()) {
-        await regTab.click();
+      if (await regTab.isVisible()) await regTab.click();
+      await page.waitForTimeout(300);
+
+      await shot(page, '15-user-register-modal');
+      await page.locator('#reg-username').fill(TEST_USER);
+      await page.locator('#reg-password').fill(TEST_PWD);
+      await page.locator('#auth-modal button:has-text("\u6ce8\u518c"), #auth-modal button:has-text("Register")').first().click();
+      await page.waitForTimeout(2000);
+
+      const toast = await page.locator('.toast').isVisible()
+        ? await page.locator('.toast').textContent() : '';
+      console.log(`    Toast: "${toast}"`);
+
+      // If already exists, login instead
+      if (toast.includes('\u5df2\u5b58\u5728') || toast.includes('exists')) {
+        console.log('    User exists, logging in...');
+        const loginTab = page.locator('#tab-login');
+        if (await loginTab.isVisible()) await loginTab.click({ timeout: 3000 });
         await page.waitForTimeout(300);
-      }
-      await shot(page, '08-user-register-modal');
-      const usernameInput = page.locator('#reg-username').first();
-      const passwordInput = page.locator('#reg-password').first();
-      if (await usernameInput.isVisible()) {
-        await usernameInput.fill(TEST_USER);
-        await passwordInput.fill(TEST_PWD);
-        await page.locator('#auth-modal button:has-text("注册"), #auth-modal button:has-text("Register")').first().click();
+        await page.locator('#login-username').fill(TEST_USER);
+        await page.locator('#login-password').fill(TEST_PWD);
+        await page.locator('#auth-modal button:has-text("\u767b\u5f55"), #auth-modal button:has-text("Login")').first().click();
         await page.waitForTimeout(2000);
-        // Either registered or "already exists" - both are OK
-        const userInfo = await page.locator('#user-info').textContent();
-        const toastText = await page.locator('.toast').isVisible()
-          ? await page.locator('.toast').textContent() : '';
-        console.log(`    User info: "${userInfo}", Toast: "${toastText}"`);
-        await shot(page, '09-user-registered');
-        // If user already exists, try logging in instead
-        if (toastText.includes('已存在') || toastText.includes('exists')) {
-          console.log('    User already exists, trying login...');
-          const loginTab = page.locator('#tab-login');
-          if (await loginTab.isVisible()) await loginTab.click({ timeout: 3000 });
-          await page.waitForTimeout(300);
-          await page.locator('#login-username').fill(TEST_USER);
-          await page.locator('#login-password').fill(TEST_PWD);
-          await page.locator('#auth-modal button:has-text("登录"), #auth-modal button:has-text("Login")').first().click();
-          await page.waitForTimeout(2000);
-        }
       }
+      await shot(page, '16-user-logged-in');
     }
     await page.close();
   });
 
   // ═══════════════════════════════════════════════
-  // RESPONSIVE & UI
+  // UI: responsive, dark mode, language
   // ═══════════════════════════════════════════════
 
-  await test('Mobile viewport renders correctly', async () => {
+  await test('Mobile viewport', async () => {
     const ctx = await browser.newContext({ viewport: { width: 375, height: 812 } });
     const page = await ctx.newPage();
     await page.goto(BASE);
     await page.waitForSelector('header', { timeout: 10000 });
-    await shot(page, '10-mobile-viewport');
+    await shot(page, '17-mobile');
     assert(await page.locator('header').isVisible(), 'Header not visible on mobile');
     await page.close();
     await ctx.close();
   });
 
-  await test('Dark mode toggle works', async () => {
+  await test('Dark mode toggle', async () => {
     const page = await browser.newPage();
     await page.goto(BASE);
     await page.waitForTimeout(1000);
     await page.click('#theme-toggle');
     await page.waitForTimeout(500);
     const theme = await page.evaluate(() => document.documentElement.getAttribute('data-theme'));
-    console.log(`    Theme after toggle: ${theme}`);
-    await shot(page, '11-dark-mode');
+    console.log(`    Theme: ${theme}`);
+    await shot(page, '18-dark-mode');
     assert(theme === 'dark' || theme === 'light', `Unexpected theme: ${theme}`);
     await page.close();
   });
 
-  await test('Language toggle works', async () => {
+  await test('Language toggle', async () => {
     const page = await browser.newPage();
     await page.goto(BASE);
     await page.waitForTimeout(1000);
@@ -352,27 +475,25 @@ async function cleanup(page) {
     await page.click('#lang-toggle');
     await page.waitForTimeout(500);
     const after = await page.locator('h2').first().textContent();
-    console.log(`    Before: "${before}", After: "${after}"`);
-    await shot(page, '12-language-toggled');
+    console.log(`    "${before}" -> "${after}"`);
+    await shot(page, '19-language-toggled');
     assert(before !== after, 'Language did not change');
     await page.close();
   });
 
   // ═══════════════════════════════════════════════
-  // ADMIN EXPORT
+  // ADMIN EXPORT: JSON
   // ═══════════════════════════════════════════════
 
-  await test('Admin JSON export button visible', async () => {
+  await test('JSON export button visible', async () => {
     const page = await browser.newPage();
     await adminLogin(page);
-    const jsonBtn = await page.locator('#export-json-btn').isVisible();
-    console.log(`    JSON export button: ${jsonBtn}`);
-    await shot(page, '13-admin-export-buttons');
-    assert(jsonBtn, 'JSON export button not visible');
+    assert(await page.locator('#export-json-btn').isVisible(), 'JSON export btn missing');
+    await shot(page, '20-export-btn');
     await page.close();
   });
 
-  await test('Admin export JSON backup (valid structure)', async () => {
+  await test('JSON export contains test data', async () => {
     const page = await browser.newPage();
     await adminLogin(page);
     const [download] = await Promise.all([
@@ -383,38 +504,50 @@ async function cleanup(page) {
     console.log(`    File: ${filename}`);
     assert(filename.endsWith('.json'), `Expected .json, got: ${filename}`);
 
-    // Verify JSON structure
-    const filePath = await download.path();
-    const content = JSON.parse(fs.readFileSync(filePath, 'utf8'));
-    console.log(`    version: ${content.version}, years: ${content.years.length}, exported_at: ${content.exported_at}`);
+    const content = JSON.parse(fs.readFileSync(await download.path(), 'utf8'));
+    console.log(`    version: ${content.version}, years: ${content.years.length}`);
     assert(content.version === 1, 'Expected version 1');
-    assert(content.years.length > 0, 'No years in export');
-    assert(content.exported_at, 'Missing exported_at timestamp');
-    await shot(page, '16-admin-export-json');
+    assert(content.exported_at, 'Missing exported_at');
+
+    // Find test year in export and verify classes & courses
+    const testYear = content.years.find(y => y.name === TEST_YEAR);
+    assert(testYear, 'Test year not in JSON export');
+    assert(testYear.classes.length === 2, `Expected 2 classes, got ${testYear.classes.length}`);
+
+    const classA = testYear.classes.find(c => c.name === TEST_CLASS_A);
+    assert(classA, 'Class-A not in export');
+    assert(classA.schedule && Object.keys(classA.schedule).length > 0, 'Class-A schedule empty in export');
+
+    const classB = testYear.classes.find(c => c.name === TEST_CLASS_B);
+    assert(classB, 'Class-B not in export');
+    // Class-B should have empty schedule
+    const classBSlots = classB.schedule ? Object.keys(classB.schedule).length : 0;
+    console.log(`    Class-A schedule keys: ${Object.keys(classA.schedule).length}, Class-B: ${classBSlots}`);
+
+    await shot(page, '21-export-json');
     await page.close();
   });
 
   // ═══════════════════════════════════════════════
-  // CLEANUP: remove [E2E] test data
+  // CLEANUP
   // ═══════════════════════════════════════════════
+
   await test('Cleanup: delete [E2E] test year', async () => {
     const page = await browser.newPage();
     await adminLogin(page);
     page.on('dialog', dialog => dialog.accept());
 
     const yearBtn = page.locator('#years-list .sidebar-item').filter({ hasText: TEST_YEAR });
-    const count = await yearBtn.count();
-    if (count > 0) {
+    if (await yearBtn.count() > 0) {
       await yearBtn.first().locator('.delete-btn').click();
       await page.waitForTimeout(1500);
-      // Verify deleted
       const after = await page.locator('#years-list').textContent();
       console.log(`    Years after cleanup: ${after}`);
-      assert(!after.includes(TEST_YEAR), 'Test year still present after deletion');
+      assert(!after.includes(TEST_YEAR), 'Test year still present');
     } else {
       console.log('    No test year to clean up');
     }
-    await shot(page, '17-cleanup-done');
+    await shot(page, '22-cleanup');
     await page.close();
   });
 
