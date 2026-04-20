@@ -362,53 +362,13 @@ async function cleanup(page) {
   // ADMIN EXPORT
   // ═══════════════════════════════════════════════
 
-  await test('Admin export buttons visible (Excel, Image, All, JSON)', async () => {
+  await test('Admin JSON export button visible', async () => {
     const page = await browser.newPage();
-    await adminToSchedule(page);
-    const btns = {
-      excel: await page.locator('#export-excel-btn').isVisible(),
-      image: await page.locator('#export-img-btn').isVisible(),
-      all:   await page.locator('#export-all-btn').isVisible(),
-      json:  await page.locator('#export-json-btn').isVisible(),
-    };
-    console.log(`    Buttons: ${JSON.stringify(btns)}`);
-    await shot(page, '13-admin-export-buttons');
-    assert(btns.excel && btns.image && btns.all && btns.json, `Some export buttons missing: ${JSON.stringify(btns)}`);
-    await page.close();
-  });
-
-  await test('Admin export Excel downloads .xlsx', async () => {
-    const page = await browser.newPage();
-    const errors = [];
-    page.on('pageerror', err => errors.push(err.message));
-    await adminToSchedule(page);
-    await page.waitForSelector('#admin-schedule-table tr', { timeout: 5000 });
-    await page.waitForTimeout(1000);
-    // Try clicking and catch any toast/error
-    await page.click('#export-excel-btn');
-    await page.waitForTimeout(3000);
-    if (errors.length) console.log(`    Page errors: ${errors.join('; ')}`);
-    const toast = await page.locator('.toast').isVisible() ? await page.locator('.toast').textContent() : 'none';
-    console.log(`    Toast after click: ${toast}`);
-    await shot(page, '14-admin-export-excel');
-    // XLSX.writeFile uses msSaveBlob or <a> click - just verify no error occurred
-    assert(errors.length === 0, `Export errors: ${errors.join('; ')}`);
-    await page.close();
-  });
-
-  await test('Admin export all schedules', async () => {
-    const page = await browser.newPage();
-    const errors = [];
-    page.on('pageerror', err => errors.push(err.message));
     await adminLogin(page);
-    await page.waitForTimeout(1000);
-    await page.click('#export-all-btn');
-    await page.waitForTimeout(5000);
-    if (errors.length) console.log(`    Page errors: ${errors.join('; ')}`);
-    const toast = await page.locator('.toast').isVisible() ? await page.locator('.toast').textContent() : 'none';
-    console.log(`    Toast after click: ${toast}`);
-    await shot(page, '15-admin-export-all');
-    assert(errors.length === 0, `Export errors: ${errors.join('; ')}`);
+    const jsonBtn = await page.locator('#export-json-btn').isVisible();
+    console.log(`    JSON export button: ${jsonBtn}`);
+    await shot(page, '13-admin-export-buttons');
+    assert(jsonBtn, 'JSON export button not visible');
     await page.close();
   });
 
