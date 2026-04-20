@@ -50,7 +50,7 @@ async function test(name, fn) {
     await page.waitForSelector('#admin-pwd');
     await page.fill('#admin-pwd', 'Icanbebetter3#');
     await page.click('button:has-text("登录")');
-    await page.waitForTimeout(3000);
+    await page.waitForTimeout(5000);
     const panelVisible = await page.locator('#admin-panel').isVisible();
     const toastVisible = await page.locator('.toast').isVisible();
     const toastText = toastVisible ? await page.locator('.toast').textContent() : '';
@@ -114,6 +114,47 @@ async function test(name, fn) {
       const allYears = await page.locator('#years-list').textContent();
       throw new Error(`Year E2E-Test-2025 not found. All years: ${allYears}`);
     }
+    await page.close();
+  });
+
+  // Helper: login admin and navigate to E2E-Test-2025 > Class-A schedule
+  async function adminToSchedule(page) {
+    await page.goto(`${BASE}/admin`);
+    await page.fill('#admin-pwd', 'Icanbebetter3#');
+    await page.click('button:has-text("登录")');
+    await page.waitForSelector('#admin-panel', { state: 'visible', timeout: 10000 });
+    await page.waitForTimeout(1500);
+    const yearBtn = page.locator('#years-list .sidebar-item').filter({ hasText: 'E2E-Test-2025' });
+    await yearBtn.first().click();
+    await page.waitForTimeout(500);
+    const classBtn = page.locator('#classes-list .sidebar-item').filter({ hasText: 'Class-A' });
+    await classBtn.first().click();
+    await page.waitForTimeout(1500);
+  }
+
+  await test('Schedule grid shows P6-P10 labels after lunch', async () => {
+    const page = await browser.newPage();
+    await adminToSchedule(page);
+    const tableText = await page.locator('#admin-schedule-table').textContent();
+    console.log(`    Checking period labels in schedule grid...`);
+    assert(tableText.includes('P6'), 'P6 label not found in schedule grid');
+    assert(tableText.includes('P10'), 'P10 label not found in schedule grid');
+    // Should NOT show old P7-P11 numbering (P7 now means something different)
+    assert(!tableText.includes('节次 7') && !tableText.includes('Period 7'), 'Old P7 label still present');
+    await shot(page, '05b-schedule-period-labels');
+    await page.close();
+  });
+
+  await test('Lunch period allows adding courses', async () => {
+    const page = await browser.newPage();
+    await adminToSchedule(page);
+    // Find the lunch row and check it has an "add course" button
+    const lunchRow = page.locator('tr.lunch-row');
+    const addBtns = lunchRow.locator('.add-course-btn');
+    const count = await addBtns.count();
+    console.log(`    Add-course buttons in lunch row: ${count}`);
+    assert(count > 0, 'Lunch row should have add-course buttons');
+    await shot(page, '05c-lunch-editable');
     await page.close();
   });
 
@@ -213,55 +254,29 @@ async function test(name, fn) {
   // ─── Admin Export ──────────────────────────────
   await test('Admin export buttons visible', async () => {
     const page = await browser.newPage();
-    await page.goto(`${BASE}/admin`);
-    await page.fill('#admin-pwd', 'Icanbebetter3#');
-    await page.click('button:has-text("登录")');
-    await page.waitForSelector('#admin-panel', { state: 'visible', timeout: 10000 });
-    await page.waitForTimeout(1500);
+    await adminToSchedule(page);
 
-    // Select year and class to show schedule editor
-    const yearBtn = page.locator('#years-list .sidebar-item').filter({ hasText: 'E2E-Test-2025' });
-    if (await yearBtn.count() > 0) {
-      await yearBtn.first().click();
-      await page.waitForTimeout(500);
-      const classBtn = page.locator('#classes-list .sidebar-item').filter({ hasText: 'Class-A' });
-      if (await classBtn.count() > 0) {
-        await classBtn.first().click();
-        await page.waitForTimeout(1500);
-      }
-    }
-
-    // Check export buttons
     const excelBtn = page.locator('#export-excel-btn');
     const imgBtn = page.locator('#export-img-btn');
     const allBtn = page.locator('#export-all-btn');
+    const jsonBtn = page.locator('#export-json-btn');
     const excelVisible = await excelBtn.isVisible();
     const imgVisible = await imgBtn.isVisible();
     const allVisible = await allBtn.isVisible();
-    console.log(`    Excel btn: ${excelVisible}, Image btn: ${imgVisible}, Export All btn: ${allVisible}`);
+    const jsonVisible = await jsonBtn.isVisible();
+    console.log(`    Excel: ${excelVisible}, Image: ${imgVisible}, All: ${allVisible}, JSON: ${jsonVisible}`);
     await shot(page, '13-admin-export-buttons');
     assert(excelVisible, 'Excel export button not visible');
     assert(imgVisible, 'Image export button not visible');
     assert(allVisible, 'Export All button not visible');
+    assert(jsonVisible, 'JSON export button not visible');
     await page.close();
   });
 
   await test('Admin export Excel triggers download', async () => {
     const page = await browser.newPage();
-    await page.goto(`${BASE}/admin`);
-    await page.fill('#admin-pwd', 'Icanbebetter3#');
-    await page.click('button:has-text("登录")');
-    await page.waitForSelector('#admin-panel', { state: 'visible', timeout: 10000 });
-    await page.waitForTimeout(1500);
+    await adminToSchedule(page);
 
-    const yearBtn = page.locator('#years-list .sidebar-item').filter({ hasText: 'E2E-Test-2025' });
-    await yearBtn.first().click();
-    await page.waitForTimeout(500);
-    const classBtn = page.locator('#classes-list .sidebar-item').filter({ hasText: 'Class-A' });
-    await classBtn.first().click();
-    await page.waitForTimeout(1500);
-
-    // Listen for download
     const [download] = await Promise.all([
       page.waitForEvent('download', { timeout: 10000 }),
       page.click('#export-excel-btn')
