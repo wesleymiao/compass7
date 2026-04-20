@@ -395,13 +395,17 @@
       return rows;
     }
 
+    function sanitizeSheetName(name) {
+      return name.replace(/[:\\/?*\[\]]/g, '_').substring(0, 31);
+    }
+
     function exportScheduleExcel() {
       if (!selectedYear || !selectedClass || !scheduleData) return showToast(t("select_year"), "error");
       const title = `${selectedYear.name} - ${selectedClass.name}`;
       const rows = scheduleToRows(scheduleData, title);
       const ws = XLSX.utils.aoa_to_sheet(rows);
       const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, selectedClass.name);
+      XLSX.utils.book_append_sheet(wb, ws, sanitizeSheetName(selectedClass.name));
       XLSX.writeFile(wb, `compass7_${selectedYear.name}_${selectedClass.name}.xlsx`);
       showToast(t("success_save"));
     }
@@ -438,7 +442,7 @@
             const title = `${year.name} - ${cls.name}`;
             const rows = scheduleToRows(schedule, title);
             const ws = XLSX.utils.aoa_to_sheet(rows);
-            const sheetName = `${year.name}-${cls.name}`.substring(0, 31);
+            const sheetName = sanitizeSheetName(`${year.name}-${cls.name}`);
             XLSX.utils.book_append_sheet(wb, ws, sheetName);
           }
         }
