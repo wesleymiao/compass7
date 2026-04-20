@@ -58,17 +58,17 @@ function exportAsExcel(scheduleData, selections, className) {
     { num: 4, time: "10:20-11:00" },
     { num: 5, time: "11:05-11:55" },
     { num: 6, time: "12:00-12:40", lunch: true },
-    { num: 7, time: "12:45-13:25" },
-    { num: 8, time: "13:30-14:10" },
-    { num: 9, time: "14:15-14:55" },
-    { num: 10, time: "15:00-15:40" },
-    { num: 11, time: "15:45-16:25" }
+    { num: 7, time: "12:45-13:25", label: "P6" },
+    { num: 8, time: "13:30-14:10", label: "P7" },
+    { num: 9, time: "14:15-14:55", label: "P8" },
+    { num: 10, time: "15:00-15:40", label: "P9" },
+    { num: 11, time: "15:45-16:25", label: "P10" }
   ];
 
   const rows = [["", ...DAYS]];
 
   PERIODS.forEach(p => {
-    const label = p.lunch ? t("lunch") : `P${p.num} (${p.time})`;
+    const label = p.lunch ? t("lunch") : `${p.label || "P" + p.num} (${p.time})`;
     const row = [label];
     for (let d = 1; d <= 5; d++) {
       const slotKey = `${d}_${p.num}`;
