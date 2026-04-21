@@ -477,10 +477,10 @@ async function addCourseAtSlot(page, day, period, nameCn, nameEn, teacher, room)
     const page = await browser.newPage();
     await adminToSchedule(page, TEST_CLASS_A);
 
-    // Check that teacher/room shows in course tags (displayed as "name\nteacher · room")
-    const tagTexts = await page.locator('.course-tag').allTextContents();
-    const hasTeacher = tagTexts.some(t => t.includes('Xu Jingyi'));
-    const hasRoom = tagTexts.some(t => t.includes('A411'));
+    // Check that teacher/room shows in course tag tooltips (title attribute)
+    const titles = await page.locator('.course-tag[title]').evaluateAll(els => els.map(e => e.title));
+    const hasTeacher = titles.some(t => t.includes('Xu Jingyi'));
+    const hasRoom = titles.some(t => t.includes('A411'));
     console.log(`    Has teacher info: ${hasTeacher}, Has room info: ${hasRoom}`);
     await shot(page, '07-teacher-room');
     assert(hasTeacher, 'Teacher info not persisted');
