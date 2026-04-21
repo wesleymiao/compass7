@@ -249,6 +249,51 @@ input:focus, select:focus {
   font-size: 0.78rem;
   margin: 2px;
   cursor: pointer;
+  position: relative;
+}
+
+.slot-cell .course-tag[title]:hover::after {
+  content: attr(title);
+  position: absolute;
+  bottom: 100%;
+  left: 50%;
+  transform: translateX(-50%);
+  background: rgba(0,0,0,0.85);
+  color: #fff;
+  padding: 4px 8px;
+  border-radius: 4px;
+  font-size: 0.72rem;
+  white-space: nowrap;
+  z-index: 100;
+  pointer-events: none;
+}
+
+.slot-cell .course-tag.hidden-tag {
+  display: none;
+}
+
+.slot-cell .show-more-btn {
+  display: inline-block;
+  background: var(--primary);
+  color: #fff;
+  padding: 2px 8px;
+  border-radius: 4px;
+  font-size: 0.72rem;
+  margin: 2px;
+  cursor: pointer;
+  opacity: 0.75;
+}
+
+.slot-cell .show-more-btn:hover {
+  opacity: 1;
+}
+
+.slot-cell.expanded .course-tag.hidden-tag {
+  display: inline-block;
+}
+
+.slot-cell.expanded .show-more-btn {
+  opacity: 0.6;
 }
 
 .slot-cell .course-tag.selected {

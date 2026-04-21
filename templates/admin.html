@@ -272,17 +272,31 @@
           td.className = "slot-cell";
           const slot = (scheduleData[String(d)] && scheduleData[String(d)][String(p.num)]) || { courses: [] };
 
+          const MAX_VISIBLE = 3;
           slot.courses.forEach((c, idx) => {
             const tag = document.createElement("span");
             tag.className = "course-tag";
-            let label = currentLang === "zh" ? c.name_cn : c.name_en;
+            if (idx >= MAX_VISIBLE) tag.classList.add("hidden-tag");
+            const label = currentLang === "zh" ? c.name_cn : c.name_en;
             const meta = [c.teacher, c.room].filter(Boolean).join(" · ");
-            if (meta) label += `\n${meta}`;
             tag.textContent = label;
-            tag.style.whiteSpace = "pre-line";
+            if (meta) tag.title = meta;
             tag.onclick = () => editCourse(d, p.num, idx);
             td.appendChild(tag);
           });
+
+          if (slot.courses.length > MAX_VISIBLE) {
+            const moreBtn = document.createElement("span");
+            moreBtn.className = "show-more-btn";
+            const extra = slot.courses.length - MAX_VISIBLE;
+            moreBtn.textContent = `+${extra}`;
+            moreBtn.onclick = (e) => {
+              e.stopPropagation();
+              td.classList.toggle("expanded");
+              moreBtn.textContent = td.classList.contains("expanded") ? t("collapse") || "收起" : `+${extra}`;
+            };
+            td.appendChild(moreBtn);
+          }
 
           {
             const addBtn = document.createElement("button");

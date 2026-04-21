@@ -91,6 +91,7 @@ const I18N = {
     export_json: "导出为 JSON",
     teacher: "教师",
     classroom: "教室",
+    collapse: "收起",
 
     // Messages
     error_required: "此项为必填",
@@ -185,6 +186,7 @@ const I18N = {
     export_json: "Export as JSON",
     teacher: "Teacher",
     classroom: "Classroom",
+    collapse: "Collapse",
 
     error_required: "This field is required",
     error_login: "Invalid username or password",

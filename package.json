@@ -1,0 +1,26 @@
+{
+  "name": "compass7",
+  "version": "1.0.0",
+  "description": "",
+  "main": "index.js",
+  "directories": {
+    "test": "tests"
+  },
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/wesleymiao/compass7.git"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/wesleymiao/compass7/issues"
+  },
+  "homepage": "https://github.com/wesleymiao/compass7#readme",
+  "dependencies": {
+    "playwright": "^1.59.1"
+  }
+}
