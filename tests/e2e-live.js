@@ -4,7 +4,7 @@
  * Screenshots saved to tests/screenshots/
  *
  * Test data strategy:
- * - All test data uses "[E2E]" prefix to distinguish from real data
+ * - Year/Class names use "[E2E]" prefix; course names use real names (no prefix)
  * - Cleanup runs at START (deletes previous run's data), NOT at end
  * - Test data remains on site after test run for manual inspection
  * - A single test user "e2e_test_user" is reused
@@ -32,243 +32,243 @@ const ADMIN_PWD = 'Icanbebetter3#';
 const SCHEDULE_DATA = [
   // ── Monday (Mo 20/04) ──
   { day: 1, period: 1, courses: [
-    { cn: '[E2E] 文学', en: '[E2E] Lit', teacher: 'Wei Lihe', room: 'A411' },
-    { cn: '[E2E] 语言与文学', en: '[E2E] L&L', teacher: 'Guo,Hui', room: '' },
+    { cn: '文学', en: 'Lit', teacher: 'Wei Lihe', room: 'A411' },
+    { cn: '语言与文学', en: 'L&L', teacher: 'Guo,Hui', room: '' },
   ]},
   { day: 1, period: 2, courses: [
-    { cn: '[E2E] 化学1a', en: '[E2E] Chem1a', teacher: 'Bai,Shui', room: 'A402' },
-    { cn: '[E2E] 化学1b', en: '[E2E] Chem1b', teacher: 'Sun Siqi', room: 'A406' },
-    { cn: '[E2E] 化学1c', en: '[E2E] Chem1c', teacher: 'Zhao Pe', room: 'A404' },
-    { cn: '[E2E] 生物1a', en: '[E2E] Bio1a', teacher: 'Zhou Qian', room: 'A403' },
-    { cn: '[E2E] 生物1b', en: '[E2E] Bio1b', teacher: 'Gu Yunting', room: 'A407' },
-    { cn: '[E2E] 生物1c', en: '[E2E] Bio1c', teacher: 'Zou Meixin', room: 'A405' },
-    { cn: '[E2E] 物理1a', en: '[E2E] Phy1a', teacher: 'Wang Yufa', room: '' },
-    { cn: '[E2E] 物理1b', en: '[E2E] Phy1b', teacher: 'Zhang Shi', room: 'A409' },
-    { cn: '[E2E] 物理1c', en: '[E2E] Phy1c', teacher: 'Jiang Jing', room: 'A410' },
-    { cn: '[E2E] 化学1d', en: '[E2E] Chem1d', teacher: 'Xu Yan', room: 'A401' },
+    { cn: '化学1a', en: 'Chem1a', teacher: 'Bai,Shui', room: 'A402' },
+    { cn: '化学1b', en: 'Chem1b', teacher: 'Sun Siqi', room: 'A406' },
+    { cn: '化学1c', en: 'Chem1c', teacher: 'Zhao Pe', room: 'A404' },
+    { cn: '生物1a', en: 'Bio1a', teacher: 'Zhou Qian', room: 'A403' },
+    { cn: '生物1b', en: 'Bio1b', teacher: 'Gu Yunting', room: 'A407' },
+    { cn: '生物1c', en: 'Bio1c', teacher: 'Zou Meixin', room: 'A405' },
+    { cn: '物理1a', en: 'Phy1a', teacher: 'Wang Yufa', room: '' },
+    { cn: '物理1b', en: 'Phy1b', teacher: 'Zhang Shi', room: 'A409' },
+    { cn: '物理1c', en: 'Phy1c', teacher: 'Jiang Jing', room: 'A410' },
+    { cn: '化学1d', en: 'Chem1d', teacher: 'Xu Yan', room: 'A401' },
   ]},
   { day: 1, period: 3, courses: [
-    { cn: '[E2E] 数学', en: '[E2E] Math', teacher: 'Xu Jingyi', room: '' },
+    { cn: '数学', en: 'Math', teacher: 'Xu Jingyi', room: '' },
   ]},
   { day: 1, period: 4, courses: [
-    { cn: '[E2E] 信息技术', en: '[E2E] IT', teacher: 'Zhou Yihao', room: 'HS Theatre' },
+    { cn: '信息技术', en: 'IT', teacher: 'Zhou Yihao', room: 'HS Theatre' },
   ]},
   { day: 1, period: 5, courses: [
-    { cn: '[E2E] 化学2a', en: '[E2E] Chem2a', teacher: 'Zhao Pe', room: 'A402' },
-    { cn: '[E2E] 化学2b', en: '[E2E] Chem2b', teacher: 'Sun Siqi', room: 'A401' },
-    { cn: '[E2E] 生物2a', en: '[E2E] Bio2a', teacher: 'Ryu Yinghe', room: 'A405' },
-    { cn: '[E2E] 生物2b', en: '[E2E] Bio2b', teacher: 'Gu Yunting', room: 'A407' },
-    { cn: '[E2E] 生物2c', en: '[E2E] Bio2c', teacher: 'Chen Ying', room: '' },
-    { cn: '[E2E] 物理2a', en: '[E2E] Phy2a', teacher: 'Zhang Shi', room: 'A410' },
-    { cn: '[E2E] 物理2b', en: '[E2E] Phy2b', teacher: 'Wu Jun', room: '' },
-    { cn: '[E2E] 物理2c', en: '[E2E] Phy2c', teacher: 'Wang Yufa', room: 'A409' },
-    { cn: '[E2E] 化学2c', en: '[E2E] Chem2c', teacher: 'Sun Jing', room: 'A403' },
+    { cn: '化学2a', en: 'Chem2a', teacher: 'Zhao Pe', room: 'A402' },
+    { cn: '化学2b', en: 'Chem2b', teacher: 'Sun Siqi', room: 'A401' },
+    { cn: '生物2a', en: 'Bio2a', teacher: 'Ryu Yinghe', room: 'A405' },
+    { cn: '生物2b', en: 'Bio2b', teacher: 'Gu Yunting', room: 'A407' },
+    { cn: '生物2c', en: 'Bio2c', teacher: 'Chen Ying', room: '' },
+    { cn: '物理2a', en: 'Phy2a', teacher: 'Zhang Shi', room: 'A410' },
+    { cn: '物理2b', en: 'Phy2b', teacher: 'Wu Jun', room: '' },
+    { cn: '物理2c', en: 'Phy2c', teacher: 'Wang Yufa', room: 'A409' },
+    { cn: '化学2c', en: 'Chem2c', teacher: 'Sun Jing', room: 'A403' },
   ]},
   { day: 1, period: 7, courses: [
-    { cn: '[E2E] 英语', en: '[E2E] Eng', teacher: 'Shaun', room: '' },
+    { cn: '英语', en: 'Eng', teacher: 'Shaun', room: '' },
   ]},
   { day: 1, period: 8, courses: [
-    { cn: '[E2E] 英语', en: '[E2E] Eng', teacher: 'Monet', room: 'A413' },
+    { cn: '英语', en: 'Eng', teacher: 'Monet', room: 'A413' },
   ]},
   { day: 1, period: 9, courses: [
-    { cn: '[E2E] 化学', en: '[E2E] Chemistry', teacher: 'Sun Jing', room: '' },
-    { cn: '[E2E] 物理', en: '[E2E] Physics', teacher: 'Zhang Shuyang', room: '' },
-    { cn: '[E2E] 生物', en: '[E2E] Biology', teacher: 'Zou Meixin', room: '' },
+    { cn: '化学', en: 'Chemistry', teacher: 'Sun Jing', room: '' },
+    { cn: '物理', en: 'Physics', teacher: 'Zhang Shuyang', room: '' },
+    { cn: '生物', en: 'Biology', teacher: 'Zou Meixin', room: '' },
   ]},
   { day: 1, period: 10, courses: [
-    { cn: '[E2E] CS1', en: '[E2E] CS1', teacher: 'Wang Anqi', room: 'A405' },
-    { cn: '[E2E] 商业1', en: '[E2E] Bus1', teacher: 'Zhang,Zhe', room: 'A403' },
-    { cn: '[E2E] 地理1a', en: '[E2E] Geo1a', teacher: 'Luo,Yijing', room: 'A401' },
-    { cn: '[E2E] 地理1b', en: '[E2E] Geo1b', teacher: 'Xu,Xiaoyun', room: 'A402' },
-    { cn: '[E2E] ESS1', en: '[E2E] ESS1', teacher: 'Ge,La', room: 'A406' },
+    { cn: 'CS1', en: 'CS1', teacher: 'Wang Anqi', room: 'A405' },
+    { cn: '商业1', en: 'Bus1', teacher: 'Zhang,Zhe', room: 'A403' },
+    { cn: '地理1a', en: 'Geo1a', teacher: 'Luo,Yijing', room: 'A401' },
+    { cn: '地理1b', en: 'Geo1b', teacher: 'Xu,Xiaoyun', room: 'A402' },
+    { cn: 'ESS1', en: 'ESS1', teacher: 'Ge,La', room: 'A406' },
   ]},
   { day: 1, period: 11, courses: [
-    { cn: '[E2E] 心理1', en: '[E2E] Psy1', teacher: 'Ren Wen', room: 'A422' },
+    { cn: '心理1', en: 'Psy1', teacher: 'Ren Wen', room: 'A422' },
   ]},
 
   // ── Tuesday (星期二 21/04) ──
   { day: 2, period: 1, courses: [
-    { cn: '[E2E] 心理健康', en: '[E2E] Mental Health', teacher: 'Wu Chenhong', room: '' },
+    { cn: '心理健康', en: 'Mental Health', teacher: 'Wu Chenhong', room: '' },
   ]},
   { day: 2, period: 2, courses: [
-    { cn: '[E2E] 经济1a', en: '[E2E] Econ1a', teacher: 'Xiao Yaolu', room: 'A403' },
+    { cn: '经济1a', en: 'Econ1a', teacher: 'Xiao Yaolu', room: 'A403' },
   ]},
   { day: 2, period: 3, courses: [
-    { cn: '[E2E] 经济1b', en: '[E2E] Econ1b', teacher: 'Liu,Juan', room: 'A402' },
-    { cn: '[E2E] 物理1', en: '[E2E] Phi1', teacher: 'Xu Jiabin', room: 'A404' },
-    { cn: '[E2E] 经济1c', en: '[E2E] Econ1c', teacher: 'Li Jiayi', room: 'A401' },
+    { cn: '经济1b', en: 'Econ1b', teacher: 'Liu,Juan', room: 'A402' },
+    { cn: '物理1', en: 'Phi1', teacher: 'Xu Jiabin', room: 'A404' },
+    { cn: '经济1c', en: 'Econ1c', teacher: 'Li Jiayi', room: 'A401' },
   ]},
   { day: 2, period: 4, courses: [
-    { cn: '[E2E] 视觉艺术1', en: '[E2E] VA1', teacher: 'Hu Chengchuan', room: 'A109' },
+    { cn: '视觉艺术1', en: 'VA1', teacher: 'Hu Chengchuan', room: 'A109' },
   ]},
   { day: 2, period: 5, courses: [
-    { cn: '[E2E] 化学1a', en: '[E2E] Chem1a', teacher: 'Bai,Shui', room: 'A402' },
-    { cn: '[E2E] 化学1b', en: '[E2E] Chem1b', teacher: 'Zhao Pe', room: 'A404' },
-    { cn: '[E2E] 生物1a', en: '[E2E] Bio1a', teacher: 'Zhou Qian', room: 'A403' },
-    { cn: '[E2E] 生物1b', en: '[E2E] Bio1b', teacher: 'Gu Yunting', room: 'A407' },
-    { cn: '[E2E] 生物1c', en: '[E2E] Bio1c', teacher: 'Zou Meixin', room: 'A405' },
-    { cn: '[E2E] 物理1a', en: '[E2E] Phy1a', teacher: 'Wang Yufa', room: '' },
-    { cn: '[E2E] 物理1b', en: '[E2E] Phy1b', teacher: 'Zhang Shi', room: 'A406' },
-    { cn: '[E2E] 物理1c', en: '[E2E] Phy1c', teacher: 'Jiang Jing', room: '' },
-    { cn: '[E2E] 化学1c', en: '[E2E] Chem1c', teacher: 'Xu Yan', room: 'A401' },
+    { cn: '化学1a', en: 'Chem1a', teacher: 'Bai,Shui', room: 'A402' },
+    { cn: '化学1b', en: 'Chem1b', teacher: 'Zhao Pe', room: 'A404' },
+    { cn: '生物1a', en: 'Bio1a', teacher: 'Zhou Qian', room: 'A403' },
+    { cn: '生物1b', en: 'Bio1b', teacher: 'Gu Yunting', room: 'A407' },
+    { cn: '生物1c', en: 'Bio1c', teacher: 'Zou Meixin', room: 'A405' },
+    { cn: '物理1a', en: 'Phy1a', teacher: 'Wang Yufa', room: '' },
+    { cn: '物理1b', en: 'Phy1b', teacher: 'Zhang Shi', room: 'A406' },
+    { cn: '物理1c', en: 'Phy1c', teacher: 'Jiang Jing', room: '' },
+    { cn: '化学1c', en: 'Chem1c', teacher: 'Xu Yan', room: 'A401' },
   ]},
   { day: 2, period: 7, courses: [
-    { cn: '[E2E] 英语', en: '[E2E] Eng', teacher: 'Shaun', room: '' },
+    { cn: '英语', en: 'Eng', teacher: 'Shaun', room: '' },
   ]},
   { day: 2, period: 8, courses: [
-    { cn: '[E2E] 英语', en: '[E2E] Eng', teacher: 'Monet', room: 'A413' },
+    { cn: '英语', en: 'Eng', teacher: 'Monet', room: 'A413' },
   ]},
   { day: 2, period: 9, courses: [
-    { cn: '[E2E] CS1', en: '[E2E] CS1', teacher: 'Wang Anqi', room: 'A405' },
-    { cn: '[E2E] 商业1', en: '[E2E] Bus1', teacher: 'Zhang,Zhe', room: 'A403' },
-    { cn: '[E2E] 地理1a', en: '[E2E] Geo1a', teacher: 'Luo,Yijing', room: 'A401' },
-    { cn: '[E2E] 地理1b', en: '[E2E] Geo1b', teacher: 'Xu,Xiaoyun', room: 'A402' },
-    { cn: '[E2E] ESS1', en: '[E2E] ESS1', teacher: 'Ge,La', room: 'A406' },
-    { cn: '[E2E] 心理1', en: '[E2E] Psy1', teacher: 'Ren Wen', room: 'A422' },
+    { cn: 'CS1', en: 'CS1', teacher: 'Wang Anqi', room: 'A405' },
+    { cn: '商业1', en: 'Bus1', teacher: 'Zhang,Zhe', room: 'A403' },
+    { cn: '地理1a', en: 'Geo1a', teacher: 'Luo,Yijing', room: 'A401' },
+    { cn: '地理1b', en: 'Geo1b', teacher: 'Xu,Xiaoyun', room: 'A402' },
+    { cn: 'ESS1', en: 'ESS1', teacher: 'Ge,La', room: 'A406' },
+    { cn: '心理1', en: 'Psy1', teacher: 'Ren Wen', room: 'A422' },
   ]},
   { day: 2, period: 10, courses: [
-    { cn: '[E2E] 体育与健康a', en: '[E2E] PE-M', teacher: 'Pan Lingxin', room: 'H Gym' },
-    { cn: '[E2E] 体育与健康b', en: '[E2E] PE-F', teacher: 'Xie,Hui', room: 'H Gym' },
+    { cn: '体育与健康a', en: 'PE-M', teacher: 'Pan Lingxin', room: 'H Gym' },
+    { cn: '体育与健康b', en: 'PE-F', teacher: 'Xie,Hui', room: 'H Gym' },
   ]},
   { day: 2, period: 11, courses: [
-    { cn: '[E2E] 数学', en: '[E2E] Math', teacher: 'Xu Jingyi', room: '' },
+    { cn: '数学', en: 'Math', teacher: 'Xu Jingyi', room: '' },
   ]},
 
   // ── Wednesday (星期三 22/04) ──
   { day: 3, period: 1, courses: [
-    { cn: '[E2E] 英语', en: '[E2E] Eng', teacher: 'Shaun', room: '' },
+    { cn: '英语', en: 'Eng', teacher: 'Shaun', room: '' },
   ]},
   { day: 3, period: 2, courses: [
-    { cn: '[E2E] 英语', en: '[E2E] Eng', teacher: 'Monet', room: 'A413' },
+    { cn: '英语', en: 'Eng', teacher: 'Monet', room: 'A413' },
   ]},
   { day: 3, period: 3, courses: [
-    { cn: '[E2E] 地理2', en: '[E2E] Geo2', teacher: 'Gu,Shi', room: 'A402' },
-    { cn: '[E2E] 商业2a', en: '[E2E] Bus2a', teacher: 'Zhang,Zhe', room: 'A403' },
-    { cn: '[E2E] 商业2b', en: '[E2E] Bus2b', teacher: 'Gan Mei', room: 'A404' },
-    { cn: '[E2E] 历史2', en: '[E2E] His2', teacher: 'Liu,Zhe', room: 'A401' },
-    { cn: '[E2E] ESS2', en: '[E2E] ESS2', teacher: 'Ge,La', room: 'A405' },
+    { cn: '地理2', en: 'Geo2', teacher: 'Gu,Shi', room: 'A402' },
+    { cn: '商业2a', en: 'Bus2a', teacher: 'Zhang,Zhe', room: 'A403' },
+    { cn: '商业2b', en: 'Bus2b', teacher: 'Gan Mei', room: 'A404' },
+    { cn: '历史2', en: 'His2', teacher: 'Liu,Zhe', room: 'A401' },
+    { cn: 'ESS2', en: 'ESS2', teacher: 'Ge,La', room: 'A405' },
   ]},
   { day: 3, period: 4, courses: [
-    { cn: '[E2E] 视觉艺术2', en: '[E2E] VA2', teacher: 'Chen Wenhua', room: 'A109' },
-    { cn: '[E2E] 音乐2', en: '[E2E] Mus2', teacher: 'Wang Yuqi', room: 'C408' },
-    { cn: '[E2E] 经济2a', en: '[E2E] Econ2a', teacher: 'Xiao Yaolu', room: 'A403' },
-    { cn: '[E2E] 经济2b', en: '[E2E] Econ2b', teacher: 'Li Jiayi', room: 'A402' },
-    { cn: '[E2E] 经济2c', en: '[E2E] Econ2c', teacher: 'Tao Yuanyuan', room: 'A401' },
+    { cn: '视觉艺术2', en: 'VA2', teacher: 'Chen Wenhua', room: 'A109' },
+    { cn: '音乐2', en: 'Mus2', teacher: 'Wang Yuqi', room: 'C408' },
+    { cn: '经济2a', en: 'Econ2a', teacher: 'Xiao Yaolu', room: 'A403' },
+    { cn: '经济2b', en: 'Econ2b', teacher: 'Li Jiayi', room: 'A402' },
+    { cn: '经济2c', en: 'Econ2c', teacher: 'Tao Yuanyuan', room: 'A401' },
   ]},
   { day: 3, period: 5, courses: [
-    { cn: '[E2E] 化学1a', en: '[E2E] Chem1a', teacher: 'Bai,Shui', room: 'A402' },
-    { cn: '[E2E] 化学1b', en: '[E2E] Chem1b', teacher: 'Sun Siqi', room: 'A406' },
-    { cn: '[E2E] 化学1c', en: '[E2E] Chem1c', teacher: 'Zhao Pe', room: 'A404' },
-    { cn: '[E2E] 生物1a', en: '[E2E] Bio1a', teacher: 'Zhou Qian', room: 'A403' },
-    { cn: '[E2E] 生物1b', en: '[E2E] Bio1b', teacher: 'Gu Yunting', room: 'A407' },
-    { cn: '[E2E] 生物1c', en: '[E2E] Bio1c', teacher: 'Zou Meixin', room: 'A405' },
-    { cn: '[E2E] 物理1a', en: '[E2E] Phy1a', teacher: 'Wang Yufa', room: '' },
-    { cn: '[E2E] 物理1b', en: '[E2E] Phy1b', teacher: 'Zhang Shi', room: 'A409' },
-    { cn: '[E2E] 物理1c', en: '[E2E] Phy1c', teacher: 'Jiang Jing', room: 'A410' },
-    { cn: '[E2E] 化学1d', en: '[E2E] Chem1d', teacher: 'Xu Yan', room: 'A401' },
+    { cn: '化学1a', en: 'Chem1a', teacher: 'Bai,Shui', room: 'A402' },
+    { cn: '化学1b', en: 'Chem1b', teacher: 'Sun Siqi', room: 'A406' },
+    { cn: '化学1c', en: 'Chem1c', teacher: 'Zhao Pe', room: 'A404' },
+    { cn: '生物1a', en: 'Bio1a', teacher: 'Zhou Qian', room: 'A403' },
+    { cn: '生物1b', en: 'Bio1b', teacher: 'Gu Yunting', room: 'A407' },
+    { cn: '生物1c', en: 'Bio1c', teacher: 'Zou Meixin', room: 'A405' },
+    { cn: '物理1a', en: 'Phy1a', teacher: 'Wang Yufa', room: '' },
+    { cn: '物理1b', en: 'Phy1b', teacher: 'Zhang Shi', room: 'A409' },
+    { cn: '物理1c', en: 'Phy1c', teacher: 'Jiang Jing', room: 'A410' },
+    { cn: '化学1d', en: 'Chem1d', teacher: 'Xu Yan', room: 'A401' },
   ]},
   { day: 3, period: 7, courses: [
-    { cn: '[E2E] 化学2a', en: '[E2E] Chem2a', teacher: 'Zhao Pe', room: 'A402' },
-    { cn: '[E2E] 化学2b', en: '[E2E] Chem2b', teacher: 'Sun Siqi', room: 'A401' },
-    { cn: '[E2E] 生物2a', en: '[E2E] Bio2a', teacher: 'Ryu Yinghe', room: 'A407' },
-    { cn: '[E2E] 生物2b', en: '[E2E] Bio2b', teacher: 'Gu Yunting', room: 'A407' },
-    { cn: '[E2E] 生物2c', en: '[E2E] Bio2c', teacher: 'Zou Meixin', room: 'A404' },
-    { cn: '[E2E] 物理2a', en: '[E2E] Phy2a', teacher: 'Zhang Shi', room: 'A410' },
-    { cn: '[E2E] 物理2b', en: '[E2E] Phy2b', teacher: 'Wu Jun', room: '' },
-    { cn: '[E2E] 物理2c', en: '[E2E] Phy2c', teacher: 'Wang Yufa', room: 'A409' },
-    { cn: '[E2E] 化学2c', en: '[E2E] Chem2c', teacher: 'Sun Jing', room: 'A403' },
+    { cn: '化学2a', en: 'Chem2a', teacher: 'Zhao Pe', room: 'A402' },
+    { cn: '化学2b', en: 'Chem2b', teacher: 'Sun Siqi', room: 'A401' },
+    { cn: '生物2a', en: 'Bio2a', teacher: 'Ryu Yinghe', room: 'A407' },
+    { cn: '生物2b', en: 'Bio2b', teacher: 'Gu Yunting', room: 'A407' },
+    { cn: '生物2c', en: 'Bio2c', teacher: 'Zou Meixin', room: 'A404' },
+    { cn: '物理2a', en: 'Phy2a', teacher: 'Zhang Shi', room: 'A410' },
+    { cn: '物理2b', en: 'Phy2b', teacher: 'Wu Jun', room: '' },
+    { cn: '物理2c', en: 'Phy2c', teacher: 'Wang Yufa', room: 'A409' },
+    { cn: '化学2c', en: 'Chem2c', teacher: 'Sun Jing', room: 'A403' },
   ]},
   { day: 3, period: 8, courses: [
-    { cn: '[E2E] PD', en: '[E2E] PD', teacher: 'Wang Lucheng', room: '' },
+    { cn: 'PD', en: 'PD', teacher: 'Wang Lucheng', room: '' },
   ]},
   { day: 3, period: 10, courses: [
-    { cn: '[E2E] 数学', en: '[E2E] Math', teacher: 'Xu Jingyi', room: '' },
+    { cn: '数学', en: 'Math', teacher: 'Xu Jingyi', room: '' },
   ]},
   { day: 3, period: 11, courses: [
-    { cn: '[E2E] 语文', en: '[E2E] Chinese', teacher: 'Li Xiaohe', room: '' },
+    { cn: '语文', en: 'Chinese', teacher: 'Li Xiaohe', room: '' },
   ]},
 
   // ── Thursday (周四 23/04) ──
   { day: 4, period: 1, courses: [
-    { cn: '[E2E] 历史', en: '[E2E] History', teacher: 'Chen,Fangjin', room: '' },
+    { cn: '历史', en: 'History', teacher: 'Chen,Fangjin', room: '' },
   ]},
   { day: 4, period: 2, courses: [
-    { cn: '[E2E] 英语', en: '[E2E] Eng', teacher: 'Shaun', room: '' },
+    { cn: '英语', en: 'Eng', teacher: 'Shaun', room: '' },
   ]},
   { day: 4, period: 3, courses: [
-    { cn: '[E2E] 化学1a', en: '[E2E] Chem1a', teacher: 'Bai,Shui', room: 'A402' },
-    { cn: '[E2E] 化学1b', en: '[E2E] Chem1b', teacher: 'Sun Siqi', room: 'A406' },
-    { cn: '[E2E] 化学1c', en: '[E2E] Chem1c', teacher: 'Zhao Pe', room: 'A404' },
-    { cn: '[E2E] 生物1a', en: '[E2E] Bio1a', teacher: 'Zhou Qian', room: 'A403' },
-    { cn: '[E2E] 生物1b', en: '[E2E] Bio1b', teacher: 'Gu Yunting', room: 'A407' },
-    { cn: '[E2E] 生物1c', en: '[E2E] Bio1c', teacher: 'Zou Meixin', room: 'A405' },
-    { cn: '[E2E] 物理1a', en: '[E2E] Phy1a', teacher: 'Wang Yufa', room: '' },
-    { cn: '[E2E] 物理1b', en: '[E2E] Phy1b', teacher: 'Zhang Shi', room: 'A409' },
-    { cn: '[E2E] 物理1c', en: '[E2E] Phy1c', teacher: 'Jiang Jing', room: 'A410' },
-    { cn: '[E2E] 化学1d', en: '[E2E] Chem1d', teacher: 'Xu Yan', room: 'A401' },
+    { cn: '化学1a', en: 'Chem1a', teacher: 'Bai,Shui', room: 'A402' },
+    { cn: '化学1b', en: 'Chem1b', teacher: 'Sun Siqi', room: 'A406' },
+    { cn: '化学1c', en: 'Chem1c', teacher: 'Zhao Pe', room: 'A404' },
+    { cn: '生物1a', en: 'Bio1a', teacher: 'Zhou Qian', room: 'A403' },
+    { cn: '生物1b', en: 'Bio1b', teacher: 'Gu Yunting', room: 'A407' },
+    { cn: '生物1c', en: 'Bio1c', teacher: 'Zou Meixin', room: 'A405' },
+    { cn: '物理1a', en: 'Phy1a', teacher: 'Wang Yufa', room: '' },
+    { cn: '物理1b', en: 'Phy1b', teacher: 'Zhang Shi', room: 'A409' },
+    { cn: '物理1c', en: 'Phy1c', teacher: 'Jiang Jing', room: 'A410' },
+    { cn: '化学1d', en: 'Chem1d', teacher: 'Xu Yan', room: 'A401' },
   ]},
   { day: 4, period: 4, courses: [
-    { cn: '[E2E] 艺术', en: '[E2E] Art', teacher: 'Wang Yuqi', room: 'A511' },
+    { cn: '艺术', en: 'Art', teacher: 'Wang Yuqi', room: 'A511' },
   ]},
   { day: 4, period: 5, courses: [
-    { cn: '[E2E] 文学', en: '[E2E] Lit', teacher: 'Wei Lihe', room: 'A412' },
-    { cn: '[E2E] 语言与文学', en: '[E2E] L&L', teacher: 'Guo,Hui', room: '' },
+    { cn: '文学', en: 'Lit', teacher: 'Wei Lihe', room: 'A412' },
+    { cn: '语言与文学', en: 'L&L', teacher: 'Guo,Hui', room: '' },
   ]},
   { day: 4, period: 7, courses: [
-    { cn: '[E2E] 化学2a', en: '[E2E] Chem2a', teacher: 'Zhao Pe', room: 'A402' },
-    { cn: '[E2E] 化学2b', en: '[E2E] Chem2b', teacher: 'Sun Siqi', room: 'A401' },
-    { cn: '[E2E] 生物2a', en: '[E2E] Bio2a', teacher: 'Ryu Yinghe', room: 'A405' },
-    { cn: '[E2E] 生物2b', en: '[E2E] Bio2b', teacher: 'Gu Yunting', room: 'A407' },
-    { cn: '[E2E] 生物2c', en: '[E2E] Bio2c', teacher: 'Zou Meixin', room: 'A404' },
-    { cn: '[E2E] 物理2a', en: '[E2E] Phy2a', teacher: 'Zhang Shi', room: 'A410' },
-    { cn: '[E2E] 物理2b', en: '[E2E] Phy2b', teacher: 'Wu Jun', room: '' },
-    { cn: '[E2E] 物理2c', en: '[E2E] Phy2c', teacher: 'Wang Yufa', room: 'A409' },
-    { cn: '[E2E] 化学2c', en: '[E2E] Chem2c', teacher: 'Sun Jing', room: 'A403' },
+    { cn: '化学2a', en: 'Chem2a', teacher: 'Zhao Pe', room: 'A402' },
+    { cn: '化学2b', en: 'Chem2b', teacher: 'Sun Siqi', room: 'A401' },
+    { cn: '生物2a', en: 'Bio2a', teacher: 'Ryu Yinghe', room: 'A405' },
+    { cn: '生物2b', en: 'Bio2b', teacher: 'Gu Yunting', room: 'A407' },
+    { cn: '生物2c', en: 'Bio2c', teacher: 'Zou Meixin', room: 'A404' },
+    { cn: '物理2a', en: 'Phy2a', teacher: 'Zhang Shi', room: 'A410' },
+    { cn: '物理2b', en: 'Phy2b', teacher: 'Wu Jun', room: '' },
+    { cn: '物理2c', en: 'Phy2c', teacher: 'Wang Yufa', room: 'A409' },
+    { cn: '化学2c', en: 'Chem2c', teacher: 'Sun Jing', room: 'A403' },
   ]},
   { day: 4, period: 8, courses: [
-    { cn: '[E2E] 思想政治', en: '[E2E] Politics', teacher: 'Zhang,Jin', room: '' },
+    { cn: '思想政治', en: 'Politics', teacher: 'Zhang,Jin', room: '' },
   ]},
   { day: 4, period: 9, courses: [
-    { cn: '[E2E] 体育与健康a', en: '[E2E] PE-M', teacher: 'Pan Lingxin', room: 'H Gym' },
-    { cn: '[E2E] 体育与健康b', en: '[E2E] PE-F', teacher: 'Xie,Hui', room: 'H Gym' },
+    { cn: '体育与健康a', en: 'PE-M', teacher: 'Pan Lingxin', room: 'H Gym' },
+    { cn: '体育与健康b', en: 'PE-F', teacher: 'Xie,Hui', room: 'H Gym' },
   ]},
   { day: 4, period: 10, courses: [
-    { cn: '[E2E] 数学', en: '[E2E] Math', teacher: 'Xu Jingyi', room: '' },
+    { cn: '数学', en: 'Math', teacher: 'Xu Jingyi', room: '' },
   ]},
 
   // ── Friday (星期五 24/04) ──
   { day: 5, period: 1, courses: [
-    { cn: '[E2E] 语文', en: '[E2E] Chinese', teacher: 'Li Xiaohe', room: '' },
+    { cn: '语文', en: 'Chinese', teacher: 'Li Xiaohe', room: '' },
   ]},
   { day: 5, period: 2, courses: [
-    { cn: '[E2E] 地理2', en: '[E2E] Geo2', teacher: 'Gu,Shi', room: 'A402' },
-    { cn: '[E2E] 商业2a', en: '[E2E] Bus2a', teacher: 'Zhang,Zhe', room: 'A403' },
-    { cn: '[E2E] 商业2b', en: '[E2E] Bus2b', teacher: 'Gan Mei', room: 'A404' },
-    { cn: '[E2E] 历史2', en: '[E2E] His2', teacher: 'Xu,Xiao', room: 'A401' },
-    { cn: '[E2E] ESS2', en: '[E2E] ESS2', teacher: 'Ge,La', room: 'A405' },
+    { cn: '地理2', en: 'Geo2', teacher: 'Gu,Shi', room: 'A402' },
+    { cn: '商业2a', en: 'Bus2a', teacher: 'Zhang,Zhe', room: 'A403' },
+    { cn: '商业2b', en: 'Bus2b', teacher: 'Gan Mei', room: 'A404' },
+    { cn: '历史2', en: 'His2', teacher: 'Xu,Xiao', room: 'A401' },
+    { cn: 'ESS2', en: 'ESS2', teacher: 'Ge,La', room: 'A405' },
   ]},
   { day: 5, period: 3, courses: [
-    { cn: '[E2E] 地理', en: '[E2E] Geography', teacher: 'Hong,Zhenyan', room: '' },
+    { cn: '地理', en: 'Geography', teacher: 'Hong,Zhenyan', room: '' },
   ]},
   { day: 5, period: 4, courses: [
-    { cn: '[E2E] CW A', en: '[E2E] CW A', teacher: 'Catherine', room: 'A401' },
-    { cn: '[E2E] JP A', en: '[E2E] JP A', teacher: 'Han,Tingting', room: 'A403' },
-    { cn: '[E2E] IC A', en: '[E2E] IC A', teacher: 'Wang Lucheng', room: 'A402' },
-    { cn: '[E2E] 语言学', en: '[E2E] Linguistics', teacher: 'David', room: 'A404' },
+    { cn: 'CW A', en: 'CW A', teacher: 'Catherine', room: 'A401' },
+    { cn: 'JP A', en: 'JP A', teacher: 'Han,Tingting', room: 'A403' },
+    { cn: 'IC A', en: 'IC A', teacher: 'Wang Lucheng', room: 'A402' },
+    { cn: '语言学', en: 'Linguistics', teacher: 'David', room: 'A404' },
   ]},
   { day: 5, period: 5, courses: [
-    { cn: '[E2E] 化学2a', en: '[E2E] Chem2a', teacher: 'Zhao Pe', room: 'A402' },
-    { cn: '[E2E] 化学2b', en: '[E2E] Chem2b', teacher: 'Sun Siqi', room: 'A401' },
-    { cn: '[E2E] 生物2a', en: '[E2E] Bio2a', teacher: 'Ryu Yinghe', room: 'A405' },
-    { cn: '[E2E] 生物2b', en: '[E2E] Bio2b', teacher: 'Chen Ying', room: 'A408' },
-    { cn: '[E2E] 生物2c', en: '[E2E] Bio2c', teacher: 'Zou Meixin', room: 'A404' },
-    { cn: '[E2E] 物理2a', en: '[E2E] Phy2a', teacher: 'Zhang Shi', room: 'A410' },
-    { cn: '[E2E] 物理2b', en: '[E2E] Phy2b', teacher: 'Wu Jun', room: '' },
-    { cn: '[E2E] 物理2c', en: '[E2E] Phy2c', teacher: 'Wang Yufa', room: 'A409' },
-    { cn: '[E2E] 化学2c', en: '[E2E] Chem2c', teacher: 'Sun Jing', room: 'A403' },
+    { cn: '化学2a', en: 'Chem2a', teacher: 'Zhao Pe', room: 'A402' },
+    { cn: '化学2b', en: 'Chem2b', teacher: 'Sun Siqi', room: 'A401' },
+    { cn: '生物2a', en: 'Bio2a', teacher: 'Ryu Yinghe', room: 'A405' },
+    { cn: '生物2b', en: 'Bio2b', teacher: 'Chen Ying', room: 'A408' },
+    { cn: '生物2c', en: 'Bio2c', teacher: 'Zou Meixin', room: 'A404' },
+    { cn: '物理2a', en: 'Phy2a', teacher: 'Zhang Shi', room: 'A410' },
+    { cn: '物理2b', en: 'Phy2b', teacher: 'Wu Jun', room: '' },
+    { cn: '物理2c', en: 'Phy2c', teacher: 'Wang Yufa', room: 'A409' },
+    { cn: '化学2c', en: 'Chem2c', teacher: 'Sun Jing', room: 'A403' },
   ]},
   { day: 5, period: 8, courses: [
-    { cn: '[E2E] 班会', en: '[E2E] Class Meeting', teacher: 'Zou Meixin', room: '' },
+    { cn: '班会', en: 'Class Meeting', teacher: 'Zou Meixin', room: '' },
   ]},
 ];
 
@@ -465,8 +465,8 @@ async function addCourseAtSlot(page, day, period, nameCn, nameEn, teacher, room)
     const tags = await page.locator('.course-tag').count();
     console.log(`    Tags after reload: ${tags}`);
     // Check specific courses with teacher info visible
-    const hasMath = await page.locator('.course-tag:has-text("[E2E] \u6570\u5b66")').count();
-    const hasEng = await page.locator('.course-tag:has-text("[E2E] \u82f1\u8bed")').count();
+    const hasMath = await page.locator('.course-tag:has-text("数学")').count();
+    const hasEng = await page.locator('.course-tag:has-text("英语")').count();
     console.log(`    Math tags: ${hasMath}, Eng tags: ${hasEng}`);
     await shot(page, '06-persisted');
     assert(tags >= TOTAL_COURSES, `Data lost: ${tags} < ${TOTAL_COURSES}`);
@@ -497,18 +497,18 @@ async function addCourseAtSlot(page, day, period, nameCn, nameEn, teacher, room)
     await adminToSchedule(page, TEST_CLASS_A);
 
     // Edit the first Math course
-    const mathTag = page.locator('.course-tag:has-text("[E2E] \u6570\u5b66")').first();
+    const mathTag = page.locator('.course-tag:has-text("数学")').first();
     await mathTag.click();
     await page.waitForSelector('#modal-overlay.active', { timeout: 5000 });
 
-    await page.fill('#course-cn', '[E2E] \u9ad8\u7b49\u6570\u5b66');
-    await page.fill('#course-en', '[E2E] Advanced Math');
+    await page.fill('#course-cn', '高等数学');
+    await page.fill('#course-en', 'Advanced Math');
     await page.click('#modal-save');
     await page.waitForTimeout(300);
     await page.click('button:has-text("\u4fdd\u5b58")');
     await page.waitForTimeout(2000);
 
-    const renamed = await page.locator('.course-tag:has-text("[E2E] \u9ad8\u7b49\u6570\u5b66")').count();
+    const renamed = await page.locator('.course-tag:has-text("高等数学")').count();
     console.log(`    Renamed Math visible: ${renamed > 0}`);
     await shot(page, '08-edited');
     assert(renamed > 0, 'Renamed course not found');
@@ -521,7 +521,7 @@ async function addCourseAtSlot(page, day, period, nameCn, nameEn, teacher, room)
 
     const before = await page.locator('.course-tag').count();
     // Delete the History course
-    const histTag = page.locator('.course-tag:has-text("[E2E] \u5386\u53f2")').first();
+    const histTag = page.locator('.course-tag:has-text("历史")').first();
     await histTag.click();
     await page.waitForSelector('#modal-overlay.active', { timeout: 5000 });
     await page.click('#modal-overlay .btn-danger');
