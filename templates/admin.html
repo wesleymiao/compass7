@@ -275,7 +275,11 @@
           slot.courses.forEach((c, idx) => {
             const tag = document.createElement("span");
             tag.className = "course-tag";
-            tag.textContent = currentLang === "zh" ? c.name_cn : c.name_en;
+            let label = currentLang === "zh" ? c.name_cn : c.name_en;
+            const meta = [c.teacher, c.room].filter(Boolean).join(" · ");
+            if (meta) label += `\n${meta}`;
+            tag.textContent = label;
+            tag.style.whiteSpace = "pre-line";
             tag.onclick = () => editCourse(d, p.num, idx);
             td.appendChild(tag);
           });
@@ -321,16 +325,22 @@
       showModal(t("add_course"), `
         <div class="form-group"><label>${t("course_name_cn")}</label><input type="text" id="course-cn"></div>
         <div class="form-group"><label>${t("course_name_en")}</label><input type="text" id="course-en"></div>
+        <div class="form-group"><label>${t("teacher")}</label><input type="text" id="course-teacher"></div>
+        <div class="form-group"><label>${t("classroom")}</label><input type="text" id="course-room"></div>
       `, () => {
         const cn = document.getElementById("course-cn").value.trim();
         const en = document.getElementById("course-en").value.trim();
+        const teacher = document.getElementById("course-teacher").value.trim();
+        const room = document.getElementById("course-room").value.trim();
         if (!cn || !en) return showToast(t("error_required"), "error");
         if (!scheduleData[String(day)]) scheduleData[String(day)] = {};
         if (!scheduleData[String(day)][String(period)]) scheduleData[String(day)][String(period)] = { block_label: null, courses: [] };
         scheduleData[String(day)][String(period)].courses.push({
           id: Math.random().toString(36).substr(2, 8),
           name_cn: cn,
-          name_en: en
+          name_en: en,
+          teacher: teacher || "",
+          room: room || ""
         });
         closeModal();
         renderScheduleGrid();
@@ -343,10 +353,14 @@
       showModal(t("edit"), `
         <div class="form-group"><label>${t("course_name_cn")}</label><input type="text" id="course-cn" value="${course.name_cn}"></div>
         <div class="form-group"><label>${t("course_name_en")}</label><input type="text" id="course-en" value="${course.name_en}"></div>
+        <div class="form-group"><label>${t("teacher")}</label><input type="text" id="course-teacher" value="${course.teacher || ""}"></div>
+        <div class="form-group"><label>${t("classroom")}</label><input type="text" id="course-room" value="${course.room || ""}"></div>
         <button class="btn btn-danger mt-16" onclick="deleteCourse(${day},${period},${idx})">${t("delete")}</button>
       `, () => {
         course.name_cn = document.getElementById("course-cn").value.trim();
         course.name_en = document.getElementById("course-en").value.trim();
+        course.teacher = document.getElementById("course-teacher").value.trim();
+        course.room = document.getElementById("course-room").value.trim();
         closeModal();
         renderScheduleGrid();
       });

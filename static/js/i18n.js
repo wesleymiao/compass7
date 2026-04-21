@@ -89,6 +89,8 @@ const I18N = {
     export_schedule: "导出课表",
     export_all_schedules: "导出所有课表",
     export_json: "导出为 JSON",
+    teacher: "教师",
+    classroom: "教室",
 
     // Messages
     error_required: "此项为必填",
@@ -181,6 +183,8 @@ const I18N = {
     export_schedule: "Export Schedule",
     export_all_schedules: "Export All Schedules",
     export_json: "Export as JSON",
+    teacher: "Teacher",
+    classroom: "Classroom",
 
     error_required: "This field is required",
     error_login: "Invalid username or password",

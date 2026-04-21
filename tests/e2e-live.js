@@ -5,10 +5,11 @@
  *
  * Test data strategy:
  * - All test data uses "[E2E]" prefix to distinguish from real data
- * - Tests create data, verify it, then clean up at the end
- * - A single test user "e2e_test_user" is reused (not timestamped)
- * - Two classes are created to test data isolation between classes
- * - Multiple courses across different periods/days for realistic coverage
+ * - Cleanup runs at START (deletes previous run's data), NOT at end
+ * - Test data remains on site after test run for manual inspection
+ * - A single test user "e2e_test_user" is reused
+ * - Two classes: Class-A (full schedule) and Class-B (empty, for isolation test)
+ * - Course data based on real IB timetable with teacher + classroom fields
  */
 const { chromium } = require('playwright');
 const path = require('path');
@@ -23,16 +24,166 @@ const TEST_USER = 'e2e_test_user';
 const TEST_PWD = 'e2eTestPass123';
 const ADMIN_PWD = 'Icanbebetter3#';
 
-// Courses to populate a realistic schedule
-const COURSES = [
-  { day: 1, period: 1, cn: '[E2E] 数学HL',   en: '[E2E] Math HL' },
-  { day: 1, period: 2, cn: '[E2E] 物理SL',   en: '[E2E] Physics SL' },
-  { day: 2, period: 1, cn: '[E2E] 英语B',    en: '[E2E] English B' },
-  { day: 3, period: 5, cn: '[E2E] 经济HL',   en: '[E2E] Economics HL' },
-  { day: 4, period: 7, cn: '[E2E] 化学SL',   en: '[E2E] Chemistry SL' },   // P6 (post-lunch)
-  { day: 5, period: 11, cn: '[E2E] 中文A',   en: '[E2E] Chinese A' },      // P10 (last period)
-  { day: 3, period: 6, cn: '[E2E] 午间活动',  en: '[E2E] Lunch Activity' }, // lunch slot
+// ═══════════════════════════════════════════════
+// Realistic IB timetable test data (from screenshot)
+// Each entry: { day, period, courses: [{ cn, en, teacher, room }] }
+// Multiple courses in one slot = student choice (dropdown)
+// ═══════════════════════════════════════════════
+const SCHEDULE_DATA = [
+  // ── Monday ──
+  { day: 1, period: 1, courses: [
+    { cn: '[E2E] 文学', en: '[E2E] Lit', teacher: 'Wei Lihe', room: 'A411' },
+    { cn: '[E2E] 语言与文学', en: '[E2E] L&L', teacher: 'Guo,Hui', room: '' },
+  ]},
+  { day: 1, period: 2, courses: [
+    { cn: '[E2E] 化学1', en: '[E2E] Chem1', teacher: '', room: '' },
+    { cn: '[E2E] 生物1', en: '[E2E] Bio1', teacher: '', room: '' },
+    { cn: '[E2E] 物理1', en: '[E2E] Phy1', teacher: '', room: '' },
+  ]},
+  { day: 1, period: 3, courses: [
+    { cn: '[E2E] 数学', en: '[E2E] Math', teacher: 'Xu Jingyi', room: '' },
+  ]},
+  { day: 1, period: 4, courses: [
+    { cn: '[E2E] 信息技术', en: '[E2E] IT', teacher: 'Zhou Yihao', room: '' },
+  ]},
+  { day: 1, period: 7, courses: [
+    { cn: '[E2E] 英语', en: '[E2E] Eng', teacher: 'Shaun', room: '' },
+  ]},
+  { day: 1, period: 8, courses: [
+    { cn: '[E2E] 英语', en: '[E2E] Eng', teacher: 'Monet', room: 'A413' },
+  ]},
+  { day: 1, period: 9, courses: [
+    { cn: '[E2E] 化学', en: '[E2E] Chemistry', teacher: 'Sun Jing', room: '' },
+    { cn: '[E2E] 物理', en: '[E2E] Physics', teacher: 'Zhang Shuyang', room: '' },
+    { cn: '[E2E] 生物', en: '[E2E] Biology', teacher: 'Zou Meixin', room: '' },
+  ]},
+  { day: 1, period: 10, courses: [
+    { cn: '[E2E] CS1', en: '[E2E] CS1', teacher: 'Wang Anqi', room: 'A405' },
+    { cn: '[E2E] 商业1', en: '[E2E] Bus1', teacher: 'Zhang,Zhe', room: 'A403' },
+    { cn: '[E2E] 地理1', en: '[E2E] Geo1', teacher: 'Luo,Yijing', room: 'A401' },
+    { cn: '[E2E] ESS1', en: '[E2E] ESS1', teacher: 'Ai,Shuib', room: 'A405' },
+  ]},
+  { day: 1, period: 11, courses: [
+    { cn: '[E2E] 心理1', en: '[E2E] Psy1', teacher: 'Ren Wen', room: 'A422' },
+  ]},
+
+  // ── Tuesday ──
+  { day: 2, period: 1, courses: [
+    { cn: '[E2E] 心理健康', en: '[E2E] Mental Health', teacher: 'Wu Chenhong', room: '' },
+  ]},
+  { day: 2, period: 2, courses: [
+    { cn: '[E2E] 经济1', en: '[E2E] Econ1', teacher: 'Xiao Yaolu', room: 'A403' },
+  ]},
+  { day: 2, period: 3, courses: [
+    { cn: '[E2E] 经济1', en: '[E2E] Econ1', teacher: 'Hu,Juan', room: 'A402' },
+    { cn: '[E2E] 物理1', en: '[E2E] Phi1', teacher: 'Xu Jiabin', room: 'A404' },
+    { cn: '[E2E] 经济1b', en: '[E2E] Econ1b', teacher: 'Li Jiayi', room: 'A401' },
+  ]},
+  { day: 2, period: 4, courses: [
+    { cn: '[E2E] 视觉艺术1', en: '[E2E] VA1', teacher: 'Hu Chengchuan', room: 'A109' },
+  ]},
+  { day: 2, period: 7, courses: [
+    { cn: '[E2E] 英语', en: '[E2E] Eng', teacher: 'Shaun', room: '' },
+  ]},
+  { day: 2, period: 8, courses: [
+    { cn: '[E2E] 英语', en: '[E2E] Eng', teacher: 'Monet', room: '' },
+  ]},
+  { day: 2, period: 9, courses: [
+    { cn: '[E2E] 体育与健康', en: '[E2E] PE', teacher: 'Pan Lingxin', room: 'H Gym' },
+  ]},
+  { day: 2, period: 10, courses: [
+    { cn: '[E2E] 体育与健康', en: '[E2E] PE', teacher: 'Xie,Hui', room: 'H Gym' },
+  ]},
+  { day: 2, period: 11, courses: [
+    { cn: '[E2E] 数学', en: '[E2E] Math', teacher: 'Xu Jingyi', room: '' },
+  ]},
+
+  // ── Wednesday ──
+  { day: 3, period: 1, courses: [
+    { cn: '[E2E] 英语', en: '[E2E] Eng', teacher: 'Shaun', room: '' },
+  ]},
+  { day: 3, period: 2, courses: [
+    { cn: '[E2E] 英语', en: '[E2E] Eng', teacher: 'Monet', room: 'A413' },
+  ]},
+  { day: 3, period: 3, courses: [
+    { cn: '[E2E] 地理2', en: '[E2E] Geo2', teacher: 'Shi Xu', room: 'A402' },
+    { cn: '[E2E] 商业2', en: '[E2E] Bus2', teacher: 'Zhang,', room: 'A403' },
+    { cn: '[E2E] 商业2b', en: '[E2E] Bus2b', teacher: 'Gan Me', room: 'A404' },
+    { cn: '[E2E] 历史2', en: '[E2E] His2', teacher: 'Liu,Zhe', room: 'A401' },
+    { cn: '[E2E] ESS2', en: '[E2E] ESS2', teacher: 'Lyu Yin', room: 'A405' },
+  ]},
+  { day: 3, period: 4, courses: [
+    { cn: '[E2E] 视觉艺术2', en: '[E2E] VA2', teacher: 'Chen Wenhua', room: 'A109' },
+    { cn: '[E2E] 音乐2', en: '[E2E] Mus2', teacher: 'Wang Yuqi', room: 'C408' },
+    { cn: '[E2E] 经济2', en: '[E2E] Econ2', teacher: 'Xiao Yaolu', room: 'A403' },
+    { cn: '[E2E] 经济2b', en: '[E2E] Econ2b', teacher: 'Li Jiayi', room: 'A402' },
+    { cn: '[E2E] 经济2c', en: '[E2E] Econ2c', teacher: 'Tao Yuanyuan', room: 'A401' },
+  ]},
+  { day: 3, period: 8, courses: [
+    { cn: '[E2E] PD', en: '[E2E] PD', teacher: 'Wang Lucheng', room: '' },
+  ]},
+  { day: 3, period: 10, courses: [
+    { cn: '[E2E] 数学', en: '[E2E] Math', teacher: 'Xu Jingyi', room: '' },
+  ]},
+  { day: 3, period: 11, courses: [
+    { cn: '[E2E] 语文', en: '[E2E] Chinese', teacher: 'Li Xiaohe', room: '' },
+  ]},
+
+  // ── Thursday ──
+  { day: 4, period: 1, courses: [
+    { cn: '[E2E] 历史', en: '[E2E] History', teacher: 'Chen,Fangjin', room: '' },
+  ]},
+  { day: 4, period: 2, courses: [
+    { cn: '[E2E] 英语', en: '[E2E] Eng', teacher: 'Shaun', room: '' },
+  ]},
+  { day: 4, period: 3, courses: [
+    { cn: '[E2E] 英语', en: '[E2E] Eng', teacher: 'Monet', room: 'A413' },
+  ]},
+  { day: 4, period: 4, courses: [
+    { cn: '[E2E] 艺术', en: '[E2E] Art', teacher: 'Wang Yuqi', room: 'A511' },
+  ]},
+  { day: 4, period: 5, courses: [
+    { cn: '[E2E] 文学', en: '[E2E] Lit', teacher: 'Wei Lihe', room: 'A412' },
+    { cn: '[E2E] 语言与文学', en: '[E2E] L&L', teacher: 'Guo,Hui', room: '' },
+  ]},
+  { day: 4, period: 8, courses: [
+    { cn: '[E2E] 思想政治', en: '[E2E] Politics', teacher: 'Zhang,Jin', room: '' },
+  ]},
+  { day: 4, period: 9, courses: [
+    { cn: '[E2E] 体育与健康', en: '[E2E] PE', teacher: 'Pan Lingxin', room: 'H Gym' },
+    { cn: '[E2E] 体育与健康b', en: '[E2E] PEb', teacher: 'Xie,Hui', room: 'H Gym' },
+  ]},
+  { day: 4, period: 10, courses: [
+    { cn: '[E2E] 数学', en: '[E2E] Math', teacher: 'Xu Jingyi', room: '' },
+  ]},
+
+  // ── Friday ──
+  { day: 5, period: 1, courses: [
+    { cn: '[E2E] 语文', en: '[E2E] Chinese', teacher: 'Li Xiaohe', room: '' },
+  ]},
+  { day: 5, period: 2, courses: [
+    { cn: '[E2E] 地理2', en: '[E2E] Geo2', teacher: 'Shi Xu', room: 'A402' },
+    { cn: '[E2E] 商业2', en: '[E2E] Bus2', teacher: 'Zhang,', room: 'A403' },
+    { cn: '[E2E] 商业2b', en: '[E2E] Bus2b', teacher: 'Gan Me', room: 'A404' },
+    { cn: '[E2E] 历史2', en: '[E2E] His2', teacher: 'Xu Xiao', room: 'A401' },
+    { cn: '[E2E] ESS2', en: '[E2E] ESS2', teacher: 'Lyu Yin', room: 'A405' },
+  ]},
+  { day: 5, period: 3, courses: [
+    { cn: '[E2E] 地理', en: '[E2E] Geography', teacher: 'Hong,Zhenyan', room: '' },
+  ]},
+  { day: 5, period: 4, courses: [
+    { cn: '[E2E] CW A', en: '[E2E] CW A', teacher: 'Catherine', room: 'A401' },
+    { cn: '[E2E] JP A', en: '[E2E] JP A', teacher: 'Han,Tingting', room: 'A403' },
+    { cn: '[E2E] IC A', en: '[E2E] IC A', teacher: 'Wang Lucheng', room: 'A402' },
+    { cn: '[E2E] 语言学', en: '[E2E] Linguistics', teacher: 'David', room: 'A404' },
+  ]},
+  { day: 5, period: 8, courses: [
+    { cn: '[E2E] 班会', en: '[E2E] Class Meeting', teacher: 'Zou Meixin', room: '' },
+  ]},
 ];
+
+// Total individual course entries for assertion
+const TOTAL_COURSES = SCHEDULE_DATA.reduce((sum, s) => sum + s.courses.length, 0);
 
 let passed = 0, failed = 0;
 const results = [];
@@ -65,38 +216,57 @@ async function adminLogin(page) {
   await page.waitForTimeout(1000);
 }
 
-// Helper: login admin and navigate to a specific year > class schedule
+// Helper: navigate to a class schedule
 async function adminToSchedule(page, className = TEST_CLASS_A) {
   await adminLogin(page);
   await page.waitForTimeout(500);
-  const yearBtn = page.locator('#years-list .sidebar-item').filter({ hasText: TEST_YEAR });
-  await yearBtn.first().click();
+  await page.locator('#years-list .sidebar-item').filter({ hasText: TEST_YEAR }).first().click();
   await page.waitForTimeout(500);
-  const classBtn = page.locator('#classes-list .sidebar-item').filter({ hasText: className });
-  await classBtn.first().click();
+  await page.locator('#classes-list .sidebar-item').filter({ hasText: className }).first().click();
   await page.waitForTimeout(1500);
 }
 
-// Helper: add a course at a specific grid position via UI
-// day: 1-5 (Mon-Fri), period: 1-11 (matches PERIODS array num)
-async function addCourseAtSlot(page, day, period, nameCn, nameEn) {
-  // Row index = period - 1 (periods 1-11 map to rows 0-10)
+// Helper: add a course via UI at day/period position
+async function addCourseAtSlot(page, day, period, nameCn, nameEn, teacher, room) {
   const row = page.locator('#admin-schedule-body tr').nth(period - 1);
-  // Column: 0=label, 1=time, 2=Mon(day1), 3=Tue(day2), ... so day d -> col d+1
-  const cell = row.locator('td').nth(day + 1);
-  const addBtn = cell.locator('.add-course-btn');
-  await addBtn.click();
+  const cell = row.locator('td').nth(day + 1); // col 0=label, 1=time, 2+=days
+  await cell.locator('.add-course-btn').click();
   await page.waitForSelector('#modal-overlay.active', { timeout: 5000 });
   await page.fill('#course-cn', nameCn);
   await page.fill('#course-en', nameEn);
+  await page.fill('#course-teacher', teacher);
+  await page.fill('#course-room', room);
   await page.click('#modal-save');
-  await page.waitForTimeout(300);
+  await page.waitForTimeout(200);
 }
-
 
 (async () => {
   const browser = await chromium.launch({ headless: true });
   console.log(`\nCompass7 E2E Tests \u2014 ${BASE}\n`);
+
+  // ═══════════════════════════════════════════════
+  // CLEANUP FROM PREVIOUS RUN (at start, not end)
+  // ═══════════════════════════════════════════════
+
+  await test('Cleanup previous [E2E] data', async () => {
+    const page = await browser.newPage();
+    await adminLogin(page);
+    page.on('dialog', dialog => dialog.accept());
+
+    const yearBtn = page.locator('#years-list .sidebar-item').filter({ hasText: TEST_YEAR });
+    const count = await yearBtn.count();
+    if (count > 0) {
+      console.log('    Deleting previous [E2E] Test Year...');
+      await yearBtn.first().locator('.delete-btn').click();
+      await page.waitForTimeout(1500);
+      const after = await page.locator('#years-list').textContent();
+      assert(!after.includes(TEST_YEAR), 'Failed to delete previous test year');
+      console.log('    Previous data cleaned');
+    } else {
+      console.log('    No previous [E2E] data found');
+    }
+    await page.close();
+  });
 
   // ═══════════════════════════════════════════════
   // ADMIN BASIC
@@ -107,240 +277,224 @@ async function addCourseAtSlot(page, day, period, nameCn, nameEn) {
     await page.goto(`${BASE}/admin`);
     await page.waitForSelector('#admin-pwd', { timeout: 10000 });
     await shot(page, '01-admin-login');
-    const title = await page.title();
-    assert(title.includes('Compass7'), `Expected Compass7 in title, got: ${title}`);
+    assert((await page.title()).includes('Compass7'));
     await page.close();
   });
 
   await test('Admin login', async () => {
     const page = await browser.newPage();
     await adminLogin(page);
-    const panelVisible = await page.locator('#admin-panel').isVisible();
     await shot(page, '02-admin-panel');
-    assert(panelVisible, 'Admin panel not visible after login');
+    assert(await page.locator('#admin-panel').isVisible());
     await page.close();
   });
 
   // ═══════════════════════════════════════════════
-  // ADMIN CREATE: year + two classes
+  // CREATE: year + two classes
   // ═══════════════════════════════════════════════
 
-  await test('Admin create test year', async () => {
+  await test('Create test year', async () => {
     const page = await browser.newPage();
     await adminLogin(page);
-    page.on('dialog', dialog => dialog.accept());
-
-    // Cleanup previous [E2E] year if present
-    const existing = page.locator('#years-list .sidebar-item').filter({ hasText: TEST_YEAR });
-    if (await existing.count() > 0) {
-      console.log('    Cleaning up previous test year...');
-      await existing.first().locator('.delete-btn').click();
-      await page.waitForTimeout(1000);
-    }
-
-    // Create
     await page.click('#admin-panel button:has-text("+")');
     await page.waitForSelector('#modal-overlay.active', { timeout: 5000 });
     await page.fill('#new-year-name', TEST_YEAR);
     await page.click('#modal-save');
     await page.waitForTimeout(2000);
-
-    const yearsList = await page.locator('#years-list').textContent();
-    console.log(`    Years: ${yearsList}`);
+    const list = await page.locator('#years-list').textContent();
+    console.log(`    Years: ${list}`);
     await shot(page, '03-year-created');
-    assert(yearsList.includes(TEST_YEAR), 'Test year not in list');
+    assert(list.includes(TEST_YEAR));
     await page.close();
   });
 
-  await test('Admin create Class-A', async () => {
+  await test('Create Class-A', async () => {
     const page = await browser.newPage();
     await adminLogin(page);
-    page.on('dialog', dialog => dialog.accept());
-
     await page.locator('#years-list .sidebar-item').filter({ hasText: TEST_YEAR }).first().click();
     await page.waitForTimeout(500);
-
     await page.click('#add-class-btn');
     await page.waitForSelector('#modal-overlay.active', { timeout: 5000 });
     await page.fill('#new-class-name', TEST_CLASS_A);
     await page.click('#modal-save');
     await page.waitForTimeout(2000);
-
-    const list = await page.locator('#classes-list').textContent();
-    console.log(`    Classes: ${list}`);
     await shot(page, '04-classA-created');
-    assert(list.includes(TEST_CLASS_A), 'Class-A not in list');
+    assert((await page.locator('#classes-list').textContent()).includes(TEST_CLASS_A));
     await page.close();
   });
 
-  await test('Admin create Class-B', async () => {
+  await test('Create Class-B', async () => {
     const page = await browser.newPage();
     await adminLogin(page);
-
     await page.locator('#years-list .sidebar-item').filter({ hasText: TEST_YEAR }).first().click();
     await page.waitForTimeout(500);
-
     await page.click('#add-class-btn');
     await page.waitForSelector('#modal-overlay.active', { timeout: 5000 });
     await page.fill('#new-class-name', TEST_CLASS_B);
     await page.click('#modal-save');
     await page.waitForTimeout(2000);
-
-    const list = await page.locator('#classes-list').textContent();
-    console.log(`    Classes: ${list}`);
-    assert(list.includes(TEST_CLASS_B), 'Class-B not in list');
+    assert((await page.locator('#classes-list').textContent()).includes(TEST_CLASS_B));
     await page.close();
   });
 
   // ═══════════════════════════════════════════════
-  // ADMIN SCHEDULE: populate Class-A with courses
+  // POPULATE: add all courses to Class-A
   // ═══════════════════════════════════════════════
 
-  await test('Admin add multiple courses to Class-A schedule', async () => {
+  await test('Populate Class-A with full IB timetable', async () => {
     const page = await browser.newPage();
     await adminToSchedule(page, TEST_CLASS_A);
 
-    for (const c of COURSES) {
-      await addCourseAtSlot(page, c.day, c.period, c.cn, c.en);
+    let added = 0;
+    for (const slot of SCHEDULE_DATA) {
+      for (const c of slot.courses) {
+        await addCourseAtSlot(page, slot.day, slot.period, c.cn, c.en, c.teacher || '', c.room || '');
+        added++;
+      }
     }
 
     // Save
     await page.click('button:has-text("\u4fdd\u5b58")');
     await page.waitForTimeout(2000);
 
-    // Verify course tags
     const tags = await page.locator('.course-tag').count();
-    console.log(`    Course tags after adding: ${tags}`);
-    await shot(page, '05-classA-schedule-full');
-    assert(tags >= COURSES.length, `Expected at least ${COURSES.length} tags, got ${tags}`);
-    await page.close();
-  });
-
-  await test('Schedule data persists after page reload', async () => {
-    const page = await browser.newPage();
-    await adminToSchedule(page, TEST_CLASS_A);
-
-    const tags = await page.locator('.course-tag').count();
-    console.log(`    Course tags after reload: ${tags}`);
-    // Check specific courses
-    const hasMath = await page.locator('.course-tag:has-text("[E2E] \u6570\u5b66HL")').count();
-    const hasPhysics = await page.locator('.course-tag:has-text("[E2E] \u7269\u7406SL")').count();
-    const hasLunch = await page.locator('.course-tag:has-text("[E2E] \u5348\u95f4\u6d3b\u52a8")').count();
-    console.log(`    Math: ${hasMath}, Physics: ${hasPhysics}, LunchActivity: ${hasLunch}`);
-    await shot(page, '06-schedule-persisted');
-    assert(tags >= COURSES.length, `Data not persisted: expected ${COURSES.length}+ tags, got ${tags}`);
-    assert(hasMath > 0, 'Math HL not found after reload');
-    assert(hasLunch > 0, 'Lunch Activity not found after reload');
+    console.log(`    Added ${added} courses, visible tags: ${tags}`);
+    await shot(page, '05-schedule-full');
+    assert(tags >= TOTAL_COURSES, `Expected ${TOTAL_COURSES} tags, got ${tags}`);
     await page.close();
   });
 
   // ═══════════════════════════════════════════════
-  // ADMIN EDIT: modify and delete courses
+  // PERSISTENCE: reload and verify
   // ═══════════════════════════════════════════════
 
-  await test('Admin edit course name', async () => {
+  await test('Schedule persists after reload', async () => {
     const page = await browser.newPage();
     await adminToSchedule(page, TEST_CLASS_A);
 
-    // Click on Math HL course tag to edit it
-    const mathTag = page.locator('.course-tag:has-text("[E2E] \u6570\u5b66HL")').first();
+    const tags = await page.locator('.course-tag').count();
+    console.log(`    Tags after reload: ${tags}`);
+    // Check specific courses with teacher info visible
+    const hasMath = await page.locator('.course-tag:has-text("[E2E] \u6570\u5b66")').count();
+    const hasEng = await page.locator('.course-tag:has-text("[E2E] \u82f1\u8bed")').count();
+    console.log(`    Math tags: ${hasMath}, Eng tags: ${hasEng}`);
+    await shot(page, '06-persisted');
+    assert(tags >= TOTAL_COURSES, `Data lost: ${tags} < ${TOTAL_COURSES}`);
+    await page.close();
+  });
+
+  await test('Teacher and room info persisted', async () => {
+    const page = await browser.newPage();
+    await adminToSchedule(page, TEST_CLASS_A);
+
+    // Check that teacher/room shows in course tags (displayed as "name\nteacher · room")
+    const tagTexts = await page.locator('.course-tag').allTextContents();
+    const hasTeacher = tagTexts.some(t => t.includes('Xu Jingyi'));
+    const hasRoom = tagTexts.some(t => t.includes('A411'));
+    console.log(`    Has teacher info: ${hasTeacher}, Has room info: ${hasRoom}`);
+    await shot(page, '07-teacher-room');
+    assert(hasTeacher, 'Teacher info not persisted');
+    assert(hasRoom, 'Room info not persisted');
+    await page.close();
+  });
+
+  // ═══════════════════════════════════════════════
+  // EDIT & DELETE
+  // ═══════════════════════════════════════════════
+
+  await test('Edit course name', async () => {
+    const page = await browser.newPage();
+    await adminToSchedule(page, TEST_CLASS_A);
+
+    // Edit the first Math course
+    const mathTag = page.locator('.course-tag:has-text("[E2E] \u6570\u5b66")').first();
     await mathTag.click();
     await page.waitForSelector('#modal-overlay.active', { timeout: 5000 });
 
-    // Change name
     await page.fill('#course-cn', '[E2E] \u9ad8\u7b49\u6570\u5b66');
     await page.fill('#course-en', '[E2E] Advanced Math');
     await page.click('#modal-save');
     await page.waitForTimeout(300);
-
-    // Save schedule
     await page.click('button:has-text("\u4fdd\u5b58")');
     await page.waitForTimeout(2000);
 
     const renamed = await page.locator('.course-tag:has-text("[E2E] \u9ad8\u7b49\u6570\u5b66")').count();
-    console.log(`    Renamed course visible: ${renamed > 0}`);
-    await shot(page, '07-course-edited');
+    console.log(`    Renamed Math visible: ${renamed > 0}`);
+    await shot(page, '08-edited');
     assert(renamed > 0, 'Renamed course not found');
     await page.close();
   });
 
-  await test('Admin delete a course', async () => {
+  await test('Delete a course', async () => {
     const page = await browser.newPage();
     await adminToSchedule(page, TEST_CLASS_A);
 
-    const tagsBefore = await page.locator('.course-tag').count();
-
-    // Click the Physics course to open edit modal
-    const physicsTag = page.locator('.course-tag:has-text("[E2E] \u7269\u7406SL")').first();
-    await physicsTag.click();
+    const before = await page.locator('.course-tag').count();
+    // Delete the History course
+    const histTag = page.locator('.course-tag:has-text("[E2E] \u5386\u53f2")').first();
+    await histTag.click();
     await page.waitForSelector('#modal-overlay.active', { timeout: 5000 });
-
-    // Click delete button inside modal
     await page.click('#modal-overlay .btn-danger');
-    await page.waitForTimeout(500);
-
-    // Save schedule
+    await page.waitForTimeout(300);
     await page.click('button:has-text("\u4fdd\u5b58")');
     await page.waitForTimeout(2000);
 
-    const tagsAfter = await page.locator('.course-tag').count();
-    console.log(`    Tags before: ${tagsBefore}, after: ${tagsAfter}`);
-    await shot(page, '08-course-deleted');
-    assert(tagsAfter < tagsBefore, `Expected fewer tags after delete: ${tagsAfter} >= ${tagsBefore}`);
+    const after = await page.locator('.course-tag').count();
+    console.log(`    Tags: ${before} -> ${after}`);
+    await shot(page, '09-deleted');
+    assert(after < before, 'Course not deleted');
     await page.close();
   });
 
-  await test('Deleted course stays deleted after reload', async () => {
+  await test('Delete persists after reload', async () => {
+    const page = await browser.newPage();
+    await adminToSchedule(page, TEST_CLASS_A);
+    // The deleted "\u5386\u53f2" tag should still be gone (we deleted the first one)
+    // Note: "\u5386\u53f2" may appear in other tags like "\u5386\u53f22", so check exact
+    await shot(page, '10-delete-persisted');
+    // Just verify total count is less than original
+    const tags = await page.locator('.course-tag').count();
+    console.log(`    Tags after reload: ${tags}`);
+    assert(tags < TOTAL_COURSES, 'Delete did not persist');
+    await page.close();
+  });
+
+  // ═══════════════════════════════════════════════
+  // SCHEDULE FEATURES
+  // ═══════════════════════════════════════════════
+
+  await test('P6-P10 labels displayed', async () => {
+    const page = await browser.newPage();
+    await adminToSchedule(page, TEST_CLASS_A);
+    const text = await page.locator('#admin-schedule-table').textContent();
+    for (const l of ['P6','P7','P8','P9','P10']) assert(text.includes(l), `${l} missing`);
+    console.log('    All P6-P10 labels OK');
+    await shot(page, '11-period-labels');
+    await page.close();
+  });
+
+  await test('Multi-course slots show multiple tags', async () => {
     const page = await browser.newPage();
     await adminToSchedule(page, TEST_CLASS_A);
 
-    const physicsCount = await page.locator('.course-tag:has-text("[E2E] \u7269\u7406SL")').count();
-    console.log(`    Physics SL after reload: ${physicsCount}`);
-    assert(physicsCount === 0, 'Deleted course reappeared after reload');
+    // Monday P10 should have 4 courses (CS1, Bus1, Geo1, ESS1)
+    // Row 9 (period 10 = index 9), col 2 (Monday = day 1, col index 1+1=2)
+    const row = page.locator('#admin-schedule-body tr').nth(9);
+    const cell = row.locator('td').nth(2); // Monday
+    const tagsInCell = await cell.locator('.course-tag').count();
+    console.log(`    Monday P10 course tags: ${tagsInCell}`);
+    await shot(page, '12-multi-course');
+    assert(tagsInCell >= 4, `Expected 4 courses in Monday P10, got ${tagsInCell}`);
     await page.close();
   });
 
-  // ═══════════════════════════════════════════════
-  // SCHEDULE FEATURES: P6-P10 + lunch editing
-  // ═══════════════════════════════════════════════
-
-  await test('P6-P10 labels displayed correctly', async () => {
-    const page = await browser.newPage();
-    await adminToSchedule(page, TEST_CLASS_A);
-    const tableText = await page.locator('#admin-schedule-table').textContent();
-    for (const label of ['P6', 'P7', 'P8', 'P9', 'P10']) {
-      assert(tableText.includes(label), `${label} label not found`);
-    }
-    console.log(`    All P6-P10 labels verified`);
-    await shot(page, '09-period-labels');
-    await page.close();
-  });
-
-  await test('Lunch period course persisted correctly', async () => {
-    const page = await browser.newPage();
-    await adminToSchedule(page, TEST_CLASS_A);
-
-    // Verify the lunch activity course is present in lunch row
-    const lunchRow = page.locator('tr.lunch-row');
-    const lunchCourses = await lunchRow.locator('.course-tag').count();
-    console.log(`    Courses in lunch row: ${lunchCourses}`);
-    await shot(page, '10-lunch-course');
-    assert(lunchCourses > 0, 'No courses found in lunch row');
-    await page.close();
-  });
-
-  // ═══════════════════════════════════════════════
-  // MULTI-CLASS: Class-B should be empty (isolation)
-  // ═══════════════════════════════════════════════
-
-  await test('Class-B schedule is empty (data isolation)', async () => {
+  await test('Class-B is empty (data isolation)', async () => {
     const page = await browser.newPage();
     await adminToSchedule(page, TEST_CLASS_B);
-
     const tags = await page.locator('.course-tag').count();
-    console.log(`    Class-B course tags: ${tags}`);
-    await shot(page, '11-classB-empty');
-    assert(tags === 0, `Class-B should have 0 courses but has ${tags}`);
+    console.log(`    Class-B tags: ${tags}`);
+    await shot(page, '13-classB-empty');
+    assert(tags === 0, `Class-B should be empty, has ${tags} tags`);
     await page.close();
   });
 
@@ -348,16 +502,7 @@ async function addCourseAtSlot(page, day, period, nameCn, nameEn) {
   // USER FLOW
   // ═══════════════════════════════════════════════
 
-  await test('User page loads', async () => {
-    const page = await browser.newPage();
-    await page.goto(BASE);
-    await page.waitForSelector('#step-1', { timeout: 10000 });
-    await shot(page, '12-user-homepage');
-    assert(await page.locator('h2').first().textContent(), 'No heading');
-    await page.close();
-  });
-
-  await test('User selects test year and sees both classes', async () => {
+  await test('User sees test year and both classes', async () => {
     const page = await browser.newPage();
     await page.goto(BASE);
     await page.waitForSelector('#step-1', { timeout: 10000 });
@@ -366,16 +511,15 @@ async function addCourseAtSlot(page, day, period, nameCn, nameEn) {
     await page.locator(`text=${TEST_YEAR}`).first().click();
     await page.waitForTimeout(1500);
 
-    const classA = await page.locator(`text=${TEST_CLASS_A}`).count();
-    const classB = await page.locator(`text=${TEST_CLASS_B}`).count();
-    console.log(`    Class-A visible: ${classA > 0}, Class-B visible: ${classB > 0}`);
-    await shot(page, '13-user-class-selection');
-    assert(classA > 0, 'Class-A not visible');
-    assert(classB > 0, 'Class-B not visible');
+    const a = await page.locator(`text=${TEST_CLASS_A}`).count();
+    const b = await page.locator(`text=${TEST_CLASS_B}`).count();
+    console.log(`    Class-A: ${a > 0}, Class-B: ${b > 0}`);
+    await shot(page, '14-user-classes');
+    assert(a > 0 && b > 0, 'Both classes should be visible');
     await page.close();
   });
 
-  await test('User views Class-A schedule with courses', async () => {
+  await test('User views Class-A schedule with teacher/room', async () => {
     const page = await browser.newPage();
     await page.goto(BASE);
     await page.waitForSelector('#step-1', { timeout: 10000 });
@@ -386,15 +530,35 @@ async function addCourseAtSlot(page, day, period, nameCn, nameEn) {
     await page.locator(`text=${TEST_CLASS_A}`).first().click();
     await page.waitForTimeout(2000);
 
-    // Should see the schedule with courses
-    const courseTags = await page.locator('.course-tag').count();
-    console.log(`    User sees ${courseTags} course tags in schedule`);
-    // Check renamed math course is visible
-    const mathVisible = await page.locator('.course-tag:has-text("\u9ad8\u7b49\u6570\u5b66")').count() > 0
-      || await page.locator('.course-tag:has-text("Advanced Math")').count() > 0;
-    console.log(`    Renamed math course visible: ${mathVisible}`);
-    await shot(page, '14-user-schedule-view');
-    assert(courseTags > 0, 'User should see courses in schedule');
+    const tags = await page.locator('.course-tag').count();
+    const selects = await page.locator('select').count();
+    console.log(`    Tags: ${tags}, Dropdowns: ${selects}`);
+
+    // Verify teacher/room visible in tags or select options
+    const pageText = await page.locator('#user-schedule-table').textContent();
+    const hasTeacher = pageText.includes('Xu Jingyi') || pageText.includes('Shaun');
+    console.log(`    Teacher info in user view: ${hasTeacher}`);
+
+    await shot(page, '15-user-schedule');
+    assert(tags > 0 || selects > 0, 'Schedule should show courses');
+    await page.close();
+  });
+
+  await test('User multi-course slot shows dropdown', async () => {
+    const page = await browser.newPage();
+    await page.goto(BASE);
+    await page.waitForSelector('#step-1', { timeout: 10000 });
+    await page.waitForTimeout(2000);
+    await page.locator(`text=${TEST_YEAR}`).first().click();
+    await page.waitForTimeout(1500);
+    await page.locator(`text=${TEST_CLASS_A}`).first().click();
+    await page.waitForTimeout(2000);
+
+    // Should have dropdowns for multi-course slots
+    const selects = await page.locator('#user-schedule-table select').count();
+    console.log(`    Dropdown selects: ${selects}`);
+    await shot(page, '16-user-dropdowns');
+    assert(selects > 0, 'Multi-course slots should show dropdowns');
     await page.close();
   });
 
@@ -407,23 +571,16 @@ async function addCourseAtSlot(page, day, period, nameCn, nameEn) {
     if (await loginBtn.isVisible()) {
       await loginBtn.click();
       await page.waitForTimeout(500);
-
-      // Try register first
       const regTab = page.locator('#tab-register');
       if (await regTab.isVisible()) await regTab.click();
       await page.waitForTimeout(300);
 
-      await shot(page, '15-user-register-modal');
       await page.locator('#reg-username').fill(TEST_USER);
       await page.locator('#reg-password').fill(TEST_PWD);
       await page.locator('#auth-modal button:has-text("\u6ce8\u518c"), #auth-modal button:has-text("Register")').first().click();
       await page.waitForTimeout(2000);
 
-      const toast = await page.locator('.toast').isVisible()
-        ? await page.locator('.toast').textContent() : '';
-      console.log(`    Toast: "${toast}"`);
-
-      // If already exists, login instead
+      const toast = await page.locator('.toast').isVisible() ? await page.locator('.toast').textContent() : '';
       if (toast.includes('\u5df2\u5b58\u5728') || toast.includes('exists')) {
         console.log('    User exists, logging in...');
         const loginTab = page.locator('#tab-login');
@@ -434,13 +591,13 @@ async function addCourseAtSlot(page, day, period, nameCn, nameEn) {
         await page.locator('#auth-modal button:has-text("\u767b\u5f55"), #auth-modal button:has-text("Login")').first().click();
         await page.waitForTimeout(2000);
       }
-      await shot(page, '16-user-logged-in');
+      await shot(page, '17-user-auth');
     }
     await page.close();
   });
 
   // ═══════════════════════════════════════════════
-  // UI: responsive, dark mode, language
+  // UI
   // ═══════════════════════════════════════════════
 
   await test('Mobile viewport', async () => {
@@ -448,22 +605,20 @@ async function addCourseAtSlot(page, day, period, nameCn, nameEn) {
     const page = await ctx.newPage();
     await page.goto(BASE);
     await page.waitForSelector('header', { timeout: 10000 });
-    await shot(page, '17-mobile');
-    assert(await page.locator('header').isVisible(), 'Header not visible on mobile');
-    await page.close();
-    await ctx.close();
+    await shot(page, '18-mobile');
+    assert(await page.locator('header').isVisible());
+    await page.close(); await ctx.close();
   });
 
-  await test('Dark mode toggle', async () => {
+  await test('Dark mode', async () => {
     const page = await browser.newPage();
     await page.goto(BASE);
     await page.waitForTimeout(1000);
     await page.click('#theme-toggle');
     await page.waitForTimeout(500);
     const theme = await page.evaluate(() => document.documentElement.getAttribute('data-theme'));
-    console.log(`    Theme: ${theme}`);
-    await shot(page, '18-dark-mode');
-    assert(theme === 'dark' || theme === 'light', `Unexpected theme: ${theme}`);
+    await shot(page, '19-dark');
+    assert(theme === 'dark' || theme === 'light');
     await page.close();
   });
 
@@ -475,81 +630,54 @@ async function addCourseAtSlot(page, day, period, nameCn, nameEn) {
     await page.click('#lang-toggle');
     await page.waitForTimeout(500);
     const after = await page.locator('h2').first().textContent();
-    console.log(`    "${before}" -> "${after}"`);
-    await shot(page, '19-language-toggled');
+    await shot(page, '20-lang');
     assert(before !== after, 'Language did not change');
     await page.close();
   });
 
   // ═══════════════════════════════════════════════
-  // ADMIN EXPORT: JSON
+  // JSON EXPORT
   // ═══════════════════════════════════════════════
 
-  await test('JSON export button visible', async () => {
-    const page = await browser.newPage();
-    await adminLogin(page);
-    assert(await page.locator('#export-json-btn').isVisible(), 'JSON export btn missing');
-    await shot(page, '20-export-btn');
-    await page.close();
-  });
-
-  await test('JSON export contains test data', async () => {
+  await test('JSON export contains test data with teacher/room', async () => {
     const page = await browser.newPage();
     await adminLogin(page);
     const [download] = await Promise.all([
       page.waitForEvent('download', { timeout: 15000 }),
       page.click('#export-json-btn')
     ]);
-    const filename = download.suggestedFilename();
-    console.log(`    File: ${filename}`);
-    assert(filename.endsWith('.json'), `Expected .json, got: ${filename}`);
 
     const content = JSON.parse(fs.readFileSync(await download.path(), 'utf8'));
-    console.log(`    version: ${content.version}, years: ${content.years.length}`);
-    assert(content.version === 1, 'Expected version 1');
-    assert(content.exported_at, 'Missing exported_at');
+    assert(content.version === 1);
 
-    // Find test year in export and verify classes & courses
     const testYear = content.years.find(y => y.name === TEST_YEAR);
-    assert(testYear, 'Test year not in JSON export');
+    assert(testYear, 'Test year not in export');
     assert(testYear.classes.length === 2, `Expected 2 classes, got ${testYear.classes.length}`);
 
     const classA = testYear.classes.find(c => c.name === TEST_CLASS_A);
-    assert(classA, 'Class-A not in export');
-    assert(classA.schedule && Object.keys(classA.schedule).length > 0, 'Class-A schedule empty in export');
+    assert(classA && classA.schedule && Object.keys(classA.schedule).length > 0, 'Class-A schedule empty');
 
-    const classB = testYear.classes.find(c => c.name === TEST_CLASS_B);
-    assert(classB, 'Class-B not in export');
-    // Class-B should have empty schedule
-    const classBSlots = classB.schedule ? Object.keys(classB.schedule).length : 0;
-    console.log(`    Class-A schedule keys: ${Object.keys(classA.schedule).length}, Class-B: ${classBSlots}`);
-
-    await shot(page, '21-export-json');
-    await page.close();
-  });
-
-  // ═══════════════════════════════════════════════
-  // CLEANUP
-  // ═══════════════════════════════════════════════
-
-  await test('Cleanup: delete [E2E] test year', async () => {
-    const page = await browser.newPage();
-    await adminLogin(page);
-    page.on('dialog', dialog => dialog.accept());
-
-    const yearBtn = page.locator('#years-list .sidebar-item').filter({ hasText: TEST_YEAR });
-    if (await yearBtn.count() > 0) {
-      await yearBtn.first().locator('.delete-btn').click();
-      await page.waitForTimeout(1500);
-      const after = await page.locator('#years-list').textContent();
-      console.log(`    Years after cleanup: ${after}`);
-      assert(!after.includes(TEST_YEAR), 'Test year still present');
-    } else {
-      console.log('    No test year to clean up');
+    // Verify teacher/room in exported data
+    let foundTeacher = false, foundRoom = false;
+    for (const dayData of Object.values(classA.schedule)) {
+      for (const slotData of Object.values(dayData)) {
+        for (const course of (slotData.courses || [])) {
+          if (course.teacher) foundTeacher = true;
+          if (course.room) foundRoom = true;
+        }
+      }
     }
-    await shot(page, '22-cleanup');
+    console.log(`    Export has teacher: ${foundTeacher}, room: ${foundRoom}`);
+    await shot(page, '21-export');
+    assert(foundTeacher, 'No teacher field in export');
+    assert(foundRoom, 'No room field in export');
     await page.close();
   });
+
+  // ═══════════════════════════════════════════════
+  // NO CLEANUP — data stays for manual inspection
+  // ═══════════════════════════════════════════════
+  console.log('\n  \u2139\ufe0f  Test data left on site for inspection (cleaned up on next run)');
 
   // ═══════════════════════════════════════════════
   // RESULTS

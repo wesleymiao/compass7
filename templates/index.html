@@ -364,7 +364,12 @@
               userSelections[slotKey] = slot.courses[0].id;
               const tag = document.createElement("span");
               tag.className = "course-tag selected";
-              tag.textContent = currentLang === "zh" ? slot.courses[0].name_cn : slot.courses[0].name_en;
+              const c = slot.courses[0];
+              let label = currentLang === "zh" ? c.name_cn : c.name_en;
+              const meta = [c.teacher, c.room].filter(Boolean).join(" · ");
+              if (meta) label += `\n${meta}`;
+              tag.textContent = label;
+              tag.style.whiteSpace = "pre-line";
               td.appendChild(tag);
             } else {
               // Multiple courses - show dropdown
@@ -378,7 +383,9 @@
               slot.courses.forEach(c => {
                 const opt = document.createElement("option");
                 opt.value = c.id;
-                opt.textContent = currentLang === "zh" ? c.name_cn : c.name_en;
+                const name = currentLang === "zh" ? c.name_cn : c.name_en;
+                const meta = [c.teacher, c.room].filter(Boolean).join(" · ");
+                opt.textContent = meta ? `${name} (${meta})` : name;
                 if (userSelections[slotKey] === c.id) opt.selected = true;
                 select.appendChild(opt);
               });
