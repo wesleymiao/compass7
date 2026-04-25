@@ -52,6 +52,10 @@
           </div>
 
           <div class="mt-24">
+            <button class="btn btn-secondary" style="width:100%" onclick="showManageGroups()" data-i18n="manage_groups">管理课程组</button>
+          </div>
+
+          <div class="mt-24">
             <button class="btn btn-secondary" style="width:100%" onclick="exportAllJSON()" id="export-json-btn" data-i18n="export_json">导出为 JSON</button>
           </div>
         </div>
@@ -142,6 +146,98 @@
       document.getElementById("course-en").value = c.name_en;
       document.getElementById("course-teacher").value = c.teacher || "";
       document.getElementById("course-room").value = c.room || "";
+    }
+
+    /* ── Course Groups ──────────────────────────── */
+    const COURSE_GROUP_KEY = "compass7_course_groups";
+
+    function loadCourseGroups() {
+      try { return JSON.parse(localStorage.getItem(COURSE_GROUP_KEY)) || []; }
+      catch { return []; }
+    }
+
+    function saveCourseGroups(groups) {
+      localStorage.setItem(COURSE_GROUP_KEY, JSON.stringify(groups));
+    }
+
+    function showManageGroups() {
+      const groups = loadCourseGroups();
+      let html = "";
+      if (!groups.length) {
+        html = `<p style="color:var(--text-secondary)">${t("no_groups")}</p>`;
+      } else {
+        html = groups.map((g, i) => {
+          const courses = g.courses.map(c => c.name_cn).join("、");
+          return `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border)">
+            <div><strong>${g.name}</strong><br><span style="font-size:0.8rem;color:var(--text-secondary)">${courses}</span></div>
+            <button class="btn btn-sm btn-danger" onclick="deleteCourseGroup(${i})">&times;</button>
+          </div>`;
+        }).join("");
+      }
+      html += `<button class="btn btn-primary mt-16" onclick="showCreateGroup()" style="width:100%">+ ${t("create_group")}</button>`;
+      showModal(t("manage_groups"), html, null);
+      document.getElementById("modal-save").style.display = "none";
+    }
+
+    function deleteCourseGroup(idx) {
+      const groups = loadCourseGroups();
+      groups.splice(idx, 1);
+      saveCourseGroups(groups);
+      showManageGroups();
+    }
+
+    function showCreateGroup() {
+      const lib = loadCourseLibrary();
+      if (!lib.length) return showToast(t("no_groups"), "error");
+      const checkboxes = lib.map((c, i) => {
+        const meta = [c.teacher, c.room].filter(Boolean).join(" · ");
+        const label = c.name_cn + " / " + c.name_en + (meta ? " (" + meta + ")" : "");
+        return `<label style="display:block;padding:3px 0;cursor:pointer"><input type="checkbox" value="${i}" style="margin-right:6px">${label}</label>`;
+      }).join("");
+      showModal(t("create_group"), `
+        <div class="form-group"><label>${t("group_name")}</label><input type="text" id="group-name-input"></div>
+        <div class="form-group"><label>${t("select_courses")}</label><div style="max-height:200px;overflow-y:auto;border:1px solid var(--border);padding:8px;border-radius:4px" id="group-course-list">${checkboxes}</div></div>
+      `, () => {
+        const name = document.getElementById("group-name-input").value.trim();
+        if (!name) return showToast(t("error_required"), "error");
+        const checked = Array.from(document.querySelectorAll("#group-course-list input:checked")).map(cb => lib[parseInt(cb.value)]);
+        if (!checked.length) return showToast(t("error_required"), "error");
+        const groups = loadCourseGroups();
+        groups.push({ name, courses: checked });
+        saveCourseGroups(groups);
+        closeModal();
+        showToast(t("success_save"));
+      });
+      document.getElementById("modal-save").style.display = "";
+    }
+
+    function addCourseGroup(day, period) {
+      const groups = loadCourseGroups();
+      if (!groups.length) return showManageGroups();
+      const opts = groups.map((g, i) => {
+        const courses = g.courses.map(c => c.name_cn).join("、");
+        return `<option value="${i}">${g.name}（${courses}）</option>`;
+      }).join("");
+      showModal(t("add_course_group"), `
+        <div class="form-group"><label>${t("course_group")}</label><select id="group-select"><option value="">${t("manual_input")}</option>${opts}</select></div>
+      `, () => {
+        const sel = document.getElementById("group-select");
+        if (sel.value === "") return;
+        const group = groups[parseInt(sel.value)];
+        if (!scheduleData[String(day)]) scheduleData[String(day)] = {};
+        if (!scheduleData[String(day)][String(period)]) scheduleData[String(day)][String(period)] = { block_label: null, courses: [] };
+        group.courses.forEach(c => {
+          scheduleData[String(day)][String(period)].courses.push({
+            id: Math.random().toString(36).substr(2, 8),
+            name_cn: c.name_cn,
+            name_en: c.name_en,
+            teacher: c.teacher || "",
+            room: c.room || ""
+          });
+        });
+        closeModal();
+        renderScheduleGrid();
+      });
     }
 
     const PERIODS = [
@@ -351,6 +447,12 @@
             addBtn.textContent = "+ " + t("add_course");
             addBtn.onclick = () => addCourse(d, p.num);
             td.appendChild(addBtn);
+
+            const addGroupBtn = document.createElement("button");
+            addGroupBtn.className = "add-course-btn add-group-btn";
+            addGroupBtn.textContent = "+ " + t("add_course_group");
+            addGroupBtn.onclick = () => addCourseGroup(d, p.num);
+            td.appendChild(addGroupBtn);
           }
 
           tr.appendChild(td);
@@ -488,6 +590,7 @@
 
     function closeModal() {
       document.getElementById("modal-overlay").classList.remove("active");
+      document.getElementById("modal-save").style.display = "";
     }
 
     /* ── Language change listener ─────────────────── */

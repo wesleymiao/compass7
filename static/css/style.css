@@ -312,6 +312,11 @@ input:focus, select:focus {
   cursor: pointer;
 }
 
+.slot-cell .add-group-btn {
+  color: var(--success, #28a745);
+  border-color: var(--success, #28a745);
+}
+
 .block-label {
   cursor: pointer;
   color: var(--primary);
