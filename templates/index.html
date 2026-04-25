@@ -332,6 +332,51 @@
       head.innerHTML = `<tr><th>${t("period")}</th><th>${t("time")}</th>${days.map(d => `<th>${d}</th>`).join("")}</tr>`;
       body.innerHTML = "";
 
+      // Build a signature for each slot's course set (sorted IDs)
+      function slotSig(d, pNum) {
+        const slot = classSchedule[String(d)] && classSchedule[String(d)][String(pNum)];
+        if (!slot || !slot.courses || slot.courses.length <= 1) return null;
+        return slot.courses.map(c => c.id).sort().join(",");
+      }
+
+      // Pre-compute merge info: for each day, find consecutive periods with same courses
+      // mergeMap[d_p] = { skip: true } if merged into previous, or { rowspan: N } if start
+      const mergeMap = {};
+      for (let d = 1; d <= 5; d++) {
+        const activePeriods = PERIODS.filter(p => !p.lunch);
+        for (let i = 0; i < activePeriods.length; i++) {
+          const p = activePeriods[i];
+          const sig = slotSig(d, p.num);
+          if (!sig) continue;
+          let span = 1;
+          while (i + span < activePeriods.length) {
+            const np = activePeriods[i + span];
+            if (slotSig(d, np.num) === sig) span++;
+            else break;
+          }
+          if (span > 1) {
+            mergeMap[`${d}_${p.num}`] = { rowspan: span };
+            for (let j = 1; j < span; j++) {
+              mergeMap[`${d}_${activePeriods[i + j].num}`] = { skip: true };
+            }
+            i += span - 1; // skip merged periods
+          }
+        }
+      }
+
+      // Build signature-to-slotKeys map for linked selection
+      const sigSlots = {};
+      for (let d = 1; d <= 5; d++) {
+        PERIODS.forEach(p => {
+          const sig = slotSig(d, p.num);
+          if (!sig) return;
+          if (!sigSlots[sig]) sigSlots[sig] = [];
+          // Only add non-skipped or start-of-merge slots
+          const mk = mergeMap[`${d}_${p.num}`];
+          if (!mk || !mk.skip) sigSlots[sig].push(`${d}_${p.num}`);
+        });
+      }
+
       PERIODS.forEach(p => {
         const tr = document.createElement("tr");
         if (p.lunch) tr.classList.add("lunch-row");
@@ -351,17 +396,33 @@
 
         // Day cells
         for (let d = 1; d <= 5; d++) {
+          const cellKey = `${d}_${p.num}`;
+          const mk = mergeMap[cellKey];
+
+          // Skip if merged into previous row
+          if (mk && mk.skip) continue;
+
           const td = document.createElement("td");
           td.className = "slot-cell";
+          if (mk && mk.rowspan > 1) td.rowSpan = mk.rowspan;
+
           const slot = classSchedule[String(d)] && classSchedule[String(d)][String(p.num)];
 
           if (p.lunch) {
             td.textContent = t("lunch");
           } else if (slot && slot.courses && slot.courses.length > 0) {
-            const slotKey = `${d}_${p.num}`;
+            const slotKey = cellKey;
             if (slot.courses.length === 1) {
               // Only one course - auto-select
               userSelections[slotKey] = slot.courses[0].id;
+              // Also set for merged periods
+              if (mk && mk.rowspan > 1) {
+                const activePeriods = PERIODS.filter(pp => !pp.lunch);
+                const startIdx = activePeriods.findIndex(pp => pp.num === p.num);
+                for (let j = 1; j < mk.rowspan; j++) {
+                  userSelections[`${d}_${activePeriods[startIdx + j].num}`] = slot.courses[0].id;
+                }
+              }
               const tag = document.createElement("span");
               tag.className = "course-tag selected";
               const c = slot.courses[0];
@@ -389,12 +450,48 @@
                 if (userSelections[slotKey] === c.id) opt.selected = true;
                 select.appendChild(opt);
               });
+              const sig = slotSig(d, p.num);
               select.onchange = () => {
                 if (select.value) userSelections[slotKey] = select.value;
                 else delete userSelections[slotKey];
+                // Set for merged periods
+                if (mk && mk.rowspan > 1) {
+                  const activePeriods = PERIODS.filter(pp => !pp.lunch);
+                  const startIdx = activePeriods.findIndex(pp => pp.num === p.num);
+                  for (let j = 1; j < mk.rowspan; j++) {
+                    const mKey = `${d}_${activePeriods[startIdx + j].num}`;
+                    if (select.value) userSelections[mKey] = select.value;
+                    else delete userSelections[mKey];
+                  }
+                }
+                // Linked selection: same course group in other slots
+                if (sig && sigSlots[sig]) {
+                  sigSlots[sig].forEach(otherKey => {
+                    if (otherKey === slotKey) return;
+                    if (select.value) userSelections[otherKey] = select.value;
+                    else delete userSelections[otherKey];
+                    // Also set for merged periods of the other slot
+                    const [od, op] = otherKey.split("_").map(Number);
+                    const omk = mergeMap[otherKey];
+                    if (omk && omk.rowspan > 1) {
+                      const activePeriods = PERIODS.filter(pp => !pp.lunch);
+                      const si = activePeriods.findIndex(pp => pp.num === op);
+                      for (let j = 1; j < omk.rowspan; j++) {
+                        const mmKey = `${od}_${activePeriods[si + j].num}`;
+                        if (select.value) userSelections[mmKey] = select.value;
+                        else delete userSelections[mmKey];
+                      }
+                    }
+                  });
+                  // Update other dropdowns visually
+                  document.querySelectorAll("select[data-sig='" + sig + "']").forEach(s => {
+                    if (s !== select) s.value = select.value;
+                  });
+                }
                 saveSelections();
                 checkAllSelected();
               };
+              select.setAttribute("data-sig", sig || "");
               td.appendChild(select);
             }
           }
