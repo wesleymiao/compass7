@@ -339,7 +339,7 @@
           if (p.lunch) return;
           const slot = classSchedule[String(d)] && classSchedule[String(d)][String(p.num)];
           if (!slot || !slot.courses || slot.courses.length <= 1) return;
-          const sig = slot.courses.map(c => c.id).sort().join(",");
+          const sig = slot.courses.map(c => c.name_cn).sort().join(",");
           if (!sigMap[sig]) sigMap[sig] = { sig, courses: slot.courses, slotKeys: [] };
           sigMap[sig].slotKeys.push(`${d}_${p.num}`);
         });
@@ -381,8 +381,8 @@
           const name = currentLang === "zh" ? c.name_cn : c.name_en;
           const meta = [c.teacher, c.room].filter(Boolean).join(" · ");
           const label = meta ? `${name}（${meta}）` : name;
-          const checked = userSelections[g.slotKeys[0]] === c.id ? "checked" : "";
-          return `<label style="display:block;padding:6px 12px;cursor:pointer;border-bottom:1px solid var(--border)"><input type="radio" name="elective-${i}" value="${c.id}" ${checked} onchange="selectElective(${i},this.value)" style="margin-right:8px">${label}</label>`;
+          const checked = userSelections[g.slotKeys[0]] === c.name_cn ? "checked" : "";
+          return `<label style="display:block;padding:6px 12px;cursor:pointer;border-bottom:1px solid var(--border)"><input type="radio" name="elective-${i}" value="${c.name_cn}" ${checked} onchange="selectElective(${i},this.value)" style="margin-right:8px">${label}</label>`;
         }).join("");
 
         const skipChecked = userSelections[g.slotKeys[0]] === "__skip__" ? "checked" : "";
@@ -450,7 +450,7 @@
             const slot = classSchedule[String(d)] && classSchedule[String(d)][String(p.num)];
             const selId = userSelections[`${d}_${p.num}`];
             if (slot && slot.courses && selId && selId !== "__skip__") {
-              const course = slot.courses.find(c => c.id === selId);
+              const course = slot.courses.find(c => c.name_cn === selId || c.id === selId);
               if (course) {
                 const tag = document.createElement("span");
                 tag.className = "course-tag selected";
@@ -543,7 +543,7 @@
             const slot = classSchedule[String(d)] && classSchedule[String(d)][String(p.num)];
             const courseId = userSelections[`${d}_${p.num}`];
             if (slot && courseId && courseId !== "__skip__") {
-              const course = slot.courses.find(c => c.id === courseId);
+              const course = slot.courses.find(c => c.name_cn === courseId || c.id === courseId);
               if (course) {
                 td.textContent = currentLang === "zh" ? course.name_cn : course.name_en;
               }
