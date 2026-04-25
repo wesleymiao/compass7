@@ -320,7 +320,7 @@ async function adminToSchedule(page, className = TEST_CLASS_A) {
 async function addCourseAtSlot(page, day, period, nameCn, nameEn, teacher, room) {
   const row = page.locator('#admin-schedule-body tr').nth(period - 1);
   const cell = row.locator('td').nth(day + 1); // col 0=label, 1=time, 2+=days
-  await cell.locator('.add-course-btn').click();
+  await cell.locator('.add-course-btn:not(.add-group-btn)').click();
   await page.waitForSelector('#modal-overlay.active', { timeout: 5000 });
   await page.fill('#course-cn', nameCn);
   await page.fill('#course-en', nameEn);
