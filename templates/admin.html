@@ -269,11 +269,11 @@
       const checkboxes = lib.map((c, i) => {
         const meta = [c.teacher, c.room].filter(Boolean).join(" · ");
         const label = c.name_cn + " / " + c.name_en + (meta ? " (" + meta + ")" : "");
-        return `<label style="display:block;padding:3px 0;cursor:pointer"><input type="checkbox" value="${i}" style="margin-right:6px">${label}</label>`;
+        return `<label style="display:block;padding:3px 0;cursor:pointer" data-search="${(c.name_cn + c.name_en + c.teacher + c.room).toLowerCase()}"><input type="checkbox" value="${i}" style="margin-right:6px">${label}</label>`;
       }).join("");
       showModal(t("create_group"), `
         <div class="form-group"><label>${t("group_name")}</label><input type="text" id="group-name-input"></div>
-        <div class="form-group"><label>${t("select_courses")}</label><div style="max-height:200px;overflow-y:auto;border:1px solid var(--border);padding:8px;border-radius:4px" id="group-course-list">${checkboxes}</div></div>
+        <div class="form-group"><label>${t("select_courses")}</label><input type="text" id="group-course-search" placeholder="🔍" style="margin-bottom:6px" oninput="filterGroupCourses()"><div style="max-height:200px;overflow-y:auto;border:1px solid var(--border);padding:8px;border-radius:4px" id="group-course-list">${checkboxes}</div></div>
       `, () => {
         const name = document.getElementById("group-name-input").value.trim();
         if (!name) return showToast(t("error_required"), "error");
@@ -287,6 +287,13 @@
       });
       document.getElementById("modal-save").style.display = "";
     }
+
+    window.filterGroupCourses = function() {
+      const q = (document.getElementById("group-course-search").value || "").toLowerCase();
+      document.querySelectorAll("#group-course-list label").forEach(el => {
+        el.style.display = !q || el.dataset.search.includes(q) ? "block" : "none";
+      });
+    };
 
     function addCourseGroup(day, period) {
       const groups = loadCourseGroups();
