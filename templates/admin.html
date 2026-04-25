@@ -468,7 +468,7 @@
       data.classes.forEach(c => {
         const div = document.createElement("div");
         div.className = `sidebar-item${selectedClass && selectedClass.id === c.id ? " active" : ""}`;
-        div.innerHTML = `<span>${c.name}</span><button class="btn btn-sm btn-danger delete-btn" onclick="event.stopPropagation();deleteClass('${c.id}')">&times;</button>`;
+        div.innerHTML = `<span>${c.name}</span><span style="display:inline-flex;gap:4px;"><button class="btn btn-sm btn-secondary delete-btn" onclick="event.stopPropagation();renameClass('${c.id}','${c.name.replace(/'/g,"\\'")}')" title="${t("edit")}">✏️</button><button class="btn btn-sm btn-danger delete-btn" onclick="event.stopPropagation();deleteClass('${c.id}')">&times;</button></span>`;
         div.onclick = () => selectClass(c);
         list.appendChild(div);
       });
@@ -496,6 +496,22 @@
       await apiCall(`/api/admin/years/${selectedYear.id}/classes/${id}`, { method: "DELETE" });
       if (selectedClass && selectedClass.id === id) selectedClass = null;
       loadClasses();
+    }
+
+    function renameClass(id, currentName) {
+      showModal(t("edit") + " " + t("class_name"), `
+        <div class="form-group"><label>${t("class_name")}</label><input type="text" id="rename-class-input" value="${currentName}"></div>
+      `, async () => {
+        const newName = document.getElementById("rename-class-input").value.trim();
+        if (!newName) return showToast(t("error_required"), "error");
+        await apiCall(`/api/admin/years/${selectedYear.id}/classes/${id}`, {
+          method: "PUT",
+          body: JSON.stringify({ name: newName })
+        });
+        if (selectedClass && selectedClass.id === id) selectedClass.name = newName;
+        closeModal();
+        loadClasses();
+      });
     }
 
     /* ── Schedule Editor ─────────────────────────── */

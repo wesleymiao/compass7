@@ -187,6 +187,18 @@ def admin_delete_class(year_id, class_id):
     return jsonify({"message": "Deleted"})
 
 
+@app.route("/api/admin/years/<year_id>/classes/<class_id>", methods=["PUT"])
+@admin_required
+def admin_rename_class(year_id, class_id):
+    data = request.get_json()
+    name = data.get("name", "").strip()
+    if not name:
+        return jsonify({"error": "Class name required"}), 400
+    if storage.rename_class(year_id, class_id, name):
+        return jsonify({"message": "Renamed"})
+    return jsonify({"error": "Class not found"}), 404
+
+
 # ── Admin: Schedule ────────────────────────────────────
 
 @app.route("/api/admin/classes/<year_id>/<class_id>/schedule", methods=["GET"])

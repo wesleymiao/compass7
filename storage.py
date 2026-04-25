@@ -192,6 +192,18 @@ def delete_class(year_id: str, class_id: str):
     return True
 
 
+def rename_class(year_id: str, class_id: str, new_name: str):
+    year = get_year(year_id)
+    if not year:
+        return False
+    for c in year["classes"]:
+        if c["id"] == class_id:
+            c["name"] = new_name
+            _write_blob(f"years/{year_id}.json", year)
+            return True
+    return False
+
+
 def get_class(year_id: str, class_id: str):
     year = get_year(year_id)
     if not year:
