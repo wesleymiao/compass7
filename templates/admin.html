@@ -270,6 +270,12 @@
       if (!selectedYear || !selectedClass) return;
       const data = await apiCall(`/api/admin/classes/${selectedYear.id}/${selectedClass.id}/schedule`);
       scheduleData = data.schedule || {};
+      // Auto-populate course library from loaded schedule
+      for (const day of Object.values(scheduleData)) {
+        for (const period of Object.values(day)) {
+          (period.courses || []).forEach(c => saveCourseToLibrary(c));
+        }
+      }
       document.getElementById("editor-placeholder").classList.add("hidden");
       document.getElementById("schedule-editor").classList.remove("hidden");
       document.getElementById("editor-title").textContent = `${selectedYear.name} - ${selectedClass.name}`;
