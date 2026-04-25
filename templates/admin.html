@@ -52,6 +52,10 @@
           </div>
 
           <div class="mt-24">
+            <button class="btn btn-secondary" style="width:100%" onclick="showManageCourses()" data-i18n="manage_courses">管理课程</button>
+          </div>
+
+          <div class="mt-24">
             <button class="btn btn-secondary" style="width:100%" onclick="showManageGroups()" data-i18n="manage_groups">管理课程组</button>
           </div>
 
@@ -123,6 +127,78 @@
       if (idx >= 0) lib[idx] = entry; else lib.push(entry);
       lib.sort((a, b) => a.name_cn.localeCompare(b.name_cn, "zh"));
       localStorage.setItem(COURSE_LIB_KEY, JSON.stringify(lib));
+    }
+
+    function buildLibrarySelect() {
+
+    function showManageCourses() {
+      const lib = loadCourseLibrary();
+      let html = "";
+      if (!lib.length) {
+        html = `<p style="color:var(--text-secondary)">${t("no_groups")}</p>`;
+      } else {
+        html = `<div style="max-height:350px;overflow-y:auto">` + lib.map((c, i) => {
+          const meta = [c.teacher, c.room].filter(Boolean).join(" · ");
+          return `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border)">
+            <div><strong>${c.name_cn} / ${c.name_en}</strong>${meta ? `<br><span style="font-size:0.8rem;color:var(--text-secondary)">${meta}</span>` : ""}</div>
+            <div style="display:flex;gap:4px">
+              <button class="btn btn-sm btn-primary" onclick="showEditLibraryCourse(${i})">✎</button>
+              <button class="btn btn-sm btn-danger" onclick="deleteLibraryCourse(${i})">&times;</button>
+            </div>
+          </div>`;
+        }).join("") + `</div>`;
+      }
+      html += `<button class="btn btn-primary mt-16" onclick="showAddCourseToLibrary()" style="width:100%">+ ${t("add_course")}</button>`;
+      showModal(t("manage_courses"), html, null);
+      document.getElementById("modal-save").style.display = "none";
+    }
+
+    function deleteLibraryCourse(idx) {
+      const lib = loadCourseLibrary();
+      lib.splice(idx, 1);
+      localStorage.setItem(COURSE_LIB_KEY, JSON.stringify(lib));
+      showManageCourses();
+    }
+
+    function showAddCourseToLibrary() {
+      showModal(t("add_course"), `
+        <div class="form-group"><label>${t("course_name_cn")}</label><input type="text" id="course-cn"></div>
+        <div class="form-group"><label>${t("course_name_en")}</label><input type="text" id="course-en"></div>
+        <div class="form-group"><label>${t("teacher")}</label><input type="text" id="course-teacher"></div>
+        <div class="form-group"><label>${t("classroom")}</label><input type="text" id="course-room"></div>
+      `, () => {
+        const cn = document.getElementById("course-cn").value.trim();
+        const en = document.getElementById("course-en").value.trim();
+        if (!cn || !en) return showToast(t("error_required"), "error");
+        saveCourseToLibrary({
+          name_cn: cn, name_en: en,
+          teacher: document.getElementById("course-teacher").value.trim(),
+          room: document.getElementById("course-room").value.trim()
+        });
+        closeModal();
+        showManageCourses();
+      });
+      document.getElementById("modal-save").style.display = "";
+    }
+
+    function showEditLibraryCourse(idx) {
+      const lib = loadCourseLibrary();
+      const c = lib[idx];
+      showModal(t("edit"), `
+        <div class="form-group"><label>${t("course_name_cn")}</label><input type="text" id="course-cn" value="${c.name_cn}"></div>
+        <div class="form-group"><label>${t("course_name_en")}</label><input type="text" id="course-en" value="${c.name_en}"></div>
+        <div class="form-group"><label>${t("teacher")}</label><input type="text" id="course-teacher" value="${c.teacher || ""}"></div>
+        <div class="form-group"><label>${t("classroom")}</label><input type="text" id="course-room" value="${c.room || ""}"></div>
+      `, () => {
+        const cn = document.getElementById("course-cn").value.trim();
+        const en = document.getElementById("course-en").value.trim();
+        if (!cn || !en) return showToast(t("error_required"), "error");
+        lib[idx] = { name_cn: cn, name_en: en, teacher: document.getElementById("course-teacher").value.trim(), room: document.getElementById("course-room").value.trim() };
+        localStorage.setItem(COURSE_LIB_KEY, JSON.stringify(lib));
+        closeModal();
+        showManageCourses();
+      });
+      document.getElementById("modal-save").style.display = "";
     }
 
     function buildLibrarySelect() {
