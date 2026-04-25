@@ -92,6 +92,8 @@ const I18N = {
     teacher: "教师",
     classroom: "教室",
     collapse: "收起",
+    select_from_library: "从课程库选择",
+    manual_input: "-- 手动输入 --",
 
     // Messages
     error_required: "此项为必填",
@@ -187,6 +189,8 @@ const I18N = {
     teacher: "Teacher",
     classroom: "Classroom",
     collapse: "Collapse",
+    select_from_library: "Select from library",
+    manual_input: "-- Manual input --",
 
     error_required: "This field is required",
     error_login: "Invalid username or password",

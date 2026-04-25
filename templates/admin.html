@@ -103,6 +103,47 @@
     let selectedClass = null;
     let scheduleData = {};
 
+    /* ── Course Library ─────────────────────────── */
+    const COURSE_LIB_KEY = "compass7_course_library";
+
+    function loadCourseLibrary() {
+      try { return JSON.parse(localStorage.getItem(COURSE_LIB_KEY)) || []; }
+      catch { return []; }
+    }
+
+    function saveCourseToLibrary(c) {
+      const lib = loadCourseLibrary();
+      const key = c.name_cn + "|" + c.name_en;
+      const idx = lib.findIndex(x => x.name_cn + "|" + x.name_en === key);
+      const entry = { name_cn: c.name_cn, name_en: c.name_en, teacher: c.teacher || "", room: c.room || "" };
+      if (idx >= 0) lib[idx] = entry; else lib.push(entry);
+      lib.sort((a, b) => a.name_cn.localeCompare(b.name_cn, "zh"));
+      localStorage.setItem(COURSE_LIB_KEY, JSON.stringify(lib));
+    }
+
+    function buildLibrarySelect() {
+      const lib = loadCourseLibrary();
+      if (!lib.length) return "";
+      const opts = lib.map((c, i) => {
+        const meta = [c.teacher, c.room].filter(Boolean).join(" · ");
+        const label = c.name_cn + " / " + c.name_en + (meta ? " (" + meta + ")" : "");
+        return `<option value="${i}">${label}</option>`;
+      }).join("");
+      return `<div class="form-group"><label>${t("select_from_library")}</label><select id="course-lib-select" onchange="fillFromLibrary()"><option value="">${t("manual_input")}</option>${opts}</select></div>`;
+    }
+
+    function fillFromLibrary() {
+      const sel = document.getElementById("course-lib-select");
+      if (!sel || sel.value === "") return;
+      const lib = loadCourseLibrary();
+      const c = lib[parseInt(sel.value)];
+      if (!c) return;
+      document.getElementById("course-cn").value = c.name_cn;
+      document.getElementById("course-en").value = c.name_en;
+      document.getElementById("course-teacher").value = c.teacher || "";
+      document.getElementById("course-room").value = c.room || "";
+    }
+
     const PERIODS = [
       { num: 1, time: "8:00-8:40" },
       { num: 2, time: "8:45-9:25" },
@@ -337,6 +378,7 @@
 
     function addCourse(day, period) {
       showModal(t("add_course"), `
+        ${buildLibrarySelect()}
         <div class="form-group"><label>${t("course_name_cn")}</label><input type="text" id="course-cn"></div>
         <div class="form-group"><label>${t("course_name_en")}</label><input type="text" id="course-en"></div>
         <div class="form-group"><label>${t("teacher")}</label><input type="text" id="course-teacher"></div>
@@ -349,13 +391,15 @@
         if (!cn || !en) return showToast(t("error_required"), "error");
         if (!scheduleData[String(day)]) scheduleData[String(day)] = {};
         if (!scheduleData[String(day)][String(period)]) scheduleData[String(day)][String(period)] = { block_label: null, courses: [] };
-        scheduleData[String(day)][String(period)].courses.push({
+        const course = {
           id: Math.random().toString(36).substr(2, 8),
           name_cn: cn,
           name_en: en,
           teacher: teacher || "",
           room: room || ""
-        });
+        };
+        scheduleData[String(day)][String(period)].courses.push(course);
+        saveCourseToLibrary(course);
         closeModal();
         renderScheduleGrid();
       });
