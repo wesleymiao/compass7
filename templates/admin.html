@@ -135,9 +135,10 @@
       if (!lib.length) {
         html = `<p style="color:var(--text-secondary)">${t("no_groups")}</p>`;
       } else {
-        html = `<div style="max-height:350px;overflow-y:auto">` + lib.map((c, i) => {
+        html = `<input type="text" id="manage-courses-search" placeholder="🔍" style="margin-bottom:8px" oninput="filterManageCourses()">`;
+        html += `<div style="max-height:350px;overflow-y:auto" id="manage-courses-list">` + lib.map((c, i) => {
           const meta = [c.teacher, c.room].filter(Boolean).join(" · ");
-          return `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border)">
+          return `<div data-search="${(c.name_cn + c.name_en + (c.teacher||'') + (c.room||'')).toLowerCase()}" style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border)">
             <div><strong>${c.name_cn} / ${c.name_en}</strong>${meta ? `<br><span style="font-size:0.8rem;color:var(--text-secondary)">${meta}</span>` : ""}</div>
             <div style="display:flex;gap:4px">
               <button class="btn btn-sm btn-primary" onclick="showEditLibraryCourse(${i})">✎</button>
@@ -150,6 +151,13 @@
       showModal(t("manage_courses"), html, null);
       document.getElementById("modal-save").style.display = "none";
     }
+
+    window.filterManageCourses = function() {
+      const q = (document.getElementById("manage-courses-search").value || "").toLowerCase();
+      document.querySelectorAll("#manage-courses-list > div").forEach(el => {
+        el.style.display = !q || (el.dataset.search && el.dataset.search.includes(q)) ? "flex" : "none";
+      });
+    };
 
     function deleteLibraryCourse(idx) {
       const lib = loadCourseLibrary();
