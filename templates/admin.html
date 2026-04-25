@@ -240,15 +240,27 @@
     };
 
     /* ── Course Groups ──────────────────────────── */
-    const COURSE_GROUP_KEY = "compass7_course_groups";
+    let _courseGroupsCache = [];
 
     function loadCourseGroups() {
-      try { return JSON.parse(localStorage.getItem(COURSE_GROUP_KEY)) || []; }
-      catch { return []; }
+      return _courseGroupsCache;
     }
 
-    function saveCourseGroups(groups) {
-      localStorage.setItem(COURSE_GROUP_KEY, JSON.stringify(groups));
+    async function fetchCourseGroups() {
+      if (!selectedYear || !selectedClass) return;
+      try {
+        const data = await apiCall(`/api/admin/classes/${selectedYear.id}/${selectedClass.id}/course-groups`);
+        _courseGroupsCache = data.groups || [];
+      } catch { _courseGroupsCache = []; }
+    }
+
+    async function saveCourseGroups(groups) {
+      _courseGroupsCache = groups;
+      if (!selectedYear || !selectedClass) return;
+      await apiCall(`/api/admin/classes/${selectedYear.id}/${selectedClass.id}/course-groups`, {
+        method: "PUT",
+        body: JSON.stringify({ groups })
+      });
     }
 
     function showManageGroups() {
@@ -273,10 +285,10 @@
       document.getElementById("modal-save").style.display = "none";
     }
 
-    function deleteCourseGroup(idx) {
+    async function deleteCourseGroup(idx) {
       const groups = loadCourseGroups();
       groups.splice(idx, 1);
-      saveCourseGroups(groups);
+      await saveCourseGroups(groups);
       showManageGroups();
     }
 
@@ -474,6 +486,7 @@
       selectedClass = cls;
       loadClasses();
       loadSchedule();
+      fetchCourseGroups();
     }
 
     function showAddClass() {

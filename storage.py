@@ -266,3 +266,13 @@ def get_selections(user_id: str):
 
 def save_selections(user_id: str, data: dict):
     _write_blob(f"selections/{user_id}.json", data)
+
+
+# ── Course Groups (per class) ────────────────────────────
+
+def get_course_groups(year_id: str, class_id: str):
+    return _read_blob(f"course_groups/{year_id}/{class_id}.json", default=[])
+
+
+def save_course_groups(year_id: str, class_id: str, groups: list):
+    _write_blob(f"course_groups/{year_id}/{class_id}.json", groups)

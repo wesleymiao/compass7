@@ -220,6 +220,24 @@ def admin_update_schedule(year_id, class_id):
     return jsonify({"error": "Class not found"}), 404
 
 
+# ── Admin: Course Groups ──────────────────────────────
+
+@app.route("/api/admin/classes/<year_id>/<class_id>/course-groups", methods=["GET"])
+@admin_required
+def admin_get_course_groups(year_id, class_id):
+    groups = storage.get_course_groups(year_id, class_id)
+    return jsonify({"groups": groups})
+
+
+@app.route("/api/admin/classes/<year_id>/<class_id>/course-groups", methods=["PUT"])
+@admin_required
+def admin_save_course_groups(year_id, class_id):
+    data = request.get_json()
+    groups = data.get("groups", [])
+    storage.save_course_groups(year_id, class_id, groups)
+    return jsonify({"message": "Course groups saved"})
+
+
 @app.route("/api/admin/classes/<year_id>/<class_id>/slot", methods=["PUT"])
 @admin_required
 def admin_update_slot(year_id, class_id):
