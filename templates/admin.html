@@ -261,7 +261,10 @@
           const courses = g.courses.map(c => c.name_cn).join("、");
           return `<div style="display:flex;justify-content:space-between;align-items:center;padding:6px 0;border-bottom:1px solid var(--border)">
             <div><strong>${g.name}</strong><br><span style="font-size:0.8rem;color:var(--text-secondary)">${courses}</span></div>
-            <button class="btn btn-sm btn-danger" onclick="deleteCourseGroup(${i})">&times;</button>
+            <div style="display:flex;gap:4px">
+              <button class="btn btn-sm btn-primary" onclick="showEditGroup(${i})">✎</button>
+              <button class="btn btn-sm btn-danger" onclick="deleteCourseGroup(${i})">&times;</button>
+            </div>
           </div>`;
         }).join("");
       }
@@ -276,6 +279,34 @@
       saveCourseGroups(groups);
       showManageGroups();
     }
+
+    window.showEditGroup = function(idx) {
+      const groups = loadCourseGroups();
+      const group = groups[idx];
+      if (!group) return;
+      const lib = loadCourseLibrary();
+      const checkedIds = new Set(group.courses.map(c => c.name_cn + "|" + c.name_en));
+      const checkboxes = lib.map((c, i) => {
+        const meta = [c.teacher, c.room].filter(Boolean).join(" · ");
+        const label = c.name_cn + " / " + c.name_en + (meta ? " (" + meta + ")" : "");
+        const checked = checkedIds.has(c.name_cn + "|" + c.name_en) ? "checked" : "";
+        return `<label style="display:block;padding:3px 0;cursor:pointer" data-search="${(c.name_cn + c.name_en + (c.teacher||'') + (c.room||'')).toLowerCase()}"><input type="checkbox" value="${i}" style="margin-right:6px" ${checked}>${label}</label>`;
+      }).join("");
+      showModal(t("edit") + " - " + group.name, `
+        <div class="form-group"><label>${t("group_name")}</label><input type="text" id="group-name-input" value="${group.name}"></div>
+        <div class="form-group"><label>${t("select_courses")}</label><input type="text" id="group-course-search" placeholder="🔍" style="margin-bottom:6px" oninput="filterGroupCourses()"><div style="max-height:200px;overflow-y:auto;border:1px solid var(--border);padding:8px;border-radius:4px" id="group-course-list">${checkboxes}</div></div>
+      `, () => {
+        const name = document.getElementById("group-name-input").value.trim();
+        if (!name) return showToast(t("error_required"), "error");
+        const checked = Array.from(document.querySelectorAll("#group-course-list input:checked")).map(cb => lib[parseInt(cb.value)]);
+        if (!checked.length) return showToast(t("error_required"), "error");
+        groups[idx] = { name, courses: checked };
+        saveCourseGroups(groups);
+        closeModal();
+        showToast(t("success_save"));
+      });
+      document.getElementById("modal-save").style.display = "";
+    };
 
     function showCreateGroup() {
       const lib = loadCourseLibrary();
