@@ -609,7 +609,7 @@ async function addCourseAtSlot(page, day, period, nameCn, nameEn, teacher, room)
     await page.close();
   });
 
-  await test('User views Class-A schedule with teacher/room', async () => {
+  await test('User views elective selection and schedule preview', async () => {
     const page = await browser.newPage();
     await page.goto(BASE);
     await page.waitForSelector('#step-1', { timeout: 10000 });
@@ -620,35 +620,32 @@ async function addCourseAtSlot(page, day, period, nameCn, nameEn, teacher, room)
     await page.locator(`text=${TEST_CLASS_A}`).first().click();
     await page.waitForTimeout(2000);
 
-    const tags = await page.locator('.course-tag').count();
-    const selects = await page.locator('select').count();
-    console.log(`    Tags: ${tags}, Dropdowns: ${selects}`);
+    // Step 3: should show elective groups with radio buttons
+    const radios = await page.locator('#elective-list input[type="radio"]').count();
+    console.log(`    Elective radio buttons: ${radios}`);
+    assert(radios > 0, 'Should show elective course options');
 
-    // Verify teacher/room visible in tags or select options
-    const pageText = await page.locator('#user-schedule-table').textContent();
-    const hasTeacher = pageText.includes('Xu Jingyi') || pageText.includes('Shaun');
-    console.log(`    Teacher info in user view: ${hasTeacher}`);
+    // Select first option for each elective group
+    const groups = await page.locator('#elective-list .card').count();
+    for (let i = 0; i < groups; i++) {
+      await page.locator(`input[name="elective-${i}"]`).first().click();
+      await page.waitForTimeout(100);
+    }
 
     await shot(page, '15-user-schedule');
-    assert(tags > 0 || selects > 0, 'Schedule should show courses');
-    await page.close();
-  });
 
-  await test('User multi-course slot shows dropdown', async () => {
-    const page = await browser.newPage();
-    await page.goto(BASE);
-    await page.waitForSelector('#step-1', { timeout: 10000 });
-    await page.waitForTimeout(2000);
-    await page.locator(`text=${TEST_YEAR}`).first().click();
-    await page.waitForTimeout(1500);
-    await page.locator(`text=${TEST_CLASS_A}`).first().click();
-    await page.waitForTimeout(2000);
+    // Click preview button to go to step 4
+    const previewBtn = page.locator('#to-preview-btn');
+    assert(!(await previewBtn.isDisabled()), 'Preview button should be enabled after selecting all');
+    await previewBtn.click();
+    await page.waitForTimeout(1000);
 
-    // Should have dropdowns for multi-course slots
-    const selects = await page.locator('#user-schedule-table select').count();
-    console.log(`    Dropdown selects: ${selects}`);
+    // Step 4: should show schedule preview with selected courses
+    const tags = await page.locator('#user-schedule-table .course-tag').count();
+    console.log(`    Preview course tags: ${tags}`);
+    assert(tags > 0, 'Preview should show selected courses');
+
     await shot(page, '16-user-dropdowns');
-    assert(selects > 0, 'Multi-course slots should show dropdowns');
     await page.close();
   });
 

@@ -28,7 +28,7 @@
       <div class="step active" data-step="1" data-i18n="step1">选择学年</div>
       <div class="step" data-step="2" data-i18n="step2">选择班级</div>
       <div class="step" data-step="3" data-i18n="step3">选择课程</div>
-      <div class="step" data-step="4" data-i18n="step4">导出课表</div>
+      <div class="step" data-step="4" data-i18n="step4">预览导出</div>
     </div>
 
     <!-- Step 1: Year -->
@@ -47,7 +47,16 @@
     <div id="step-3" class="hidden">
       <div class="flex-between mb-16">
         <h2 data-i18n="select_courses">请为每个时间段选择课程</h2>
-        <button class="btn btn-primary" onclick="goToExport()" id="to-export-btn" disabled data-i18n="export_title">导出课表</button>
+      </div>
+      <div id="elective-list" class="mt-16"></div>
+      <button class="btn btn-primary mt-16" id="to-preview-btn" disabled onclick="goToStep(4);renderUserSchedule();renderExportPreview();" style="width:100%">查看课表预览 →</button>
+    </div>
+
+    <!-- Step 4: Preview & Export -->
+    <div id="step-4" class="hidden">
+      <div class="flex-between mb-16">
+        <h2 data-i18n="preview">课表预览</h2>
+        <button class="btn btn-secondary" onclick="goToStep(3)">← 返回选课</button>
       </div>
       <div class="schedule-wrapper">
         <table class="schedule-grid" id="user-schedule-table">
@@ -55,11 +64,7 @@
           <tbody id="user-schedule-body"></tbody>
         </table>
       </div>
-    </div>
-
-    <!-- Step 4: Export -->
-    <div id="step-4" class="hidden">
-      <h2 class="mb-16" data-i18n="export_title">导出课表</h2>
+      <h2 class="mt-24 mb-16" data-i18n="export_title">导出课表</h2>
 
       <div class="export-options">
         <div class="export-option" onclick="showExportImage()">
@@ -318,10 +323,99 @@
     }
 
     /* ── User Schedule ───────────────────────────── */
+    let electiveGroups = []; // [{ sig, courses, slotKeys }]
+
     async function loadUserSchedule() {
       const data = await apiCall(`/api/classes/${selectedYear.id}/${selectedClass.id}/schedule`);
       classSchedule = data.schedule || {};
-      renderUserSchedule();
+      buildElectiveList();
+    }
+
+    function buildElectiveList() {
+      // Find all multi-course slots, group by signature (same course set = one choice)
+      const sigMap = {};
+      for (let d = 1; d <= 5; d++) {
+        PERIODS.forEach(p => {
+          if (p.lunch) return;
+          const slot = classSchedule[String(d)] && classSchedule[String(d)][String(p.num)];
+          if (!slot || !slot.courses || slot.courses.length <= 1) return;
+          const sig = slot.courses.map(c => c.id).sort().join(",");
+          if (!sigMap[sig]) sigMap[sig] = { sig, courses: slot.courses, slotKeys: [] };
+          sigMap[sig].slotKeys.push(`${d}_${p.num}`);
+        });
+      }
+      electiveGroups = Object.values(sigMap);
+
+      // Auto-select single-course slots
+      for (let d = 1; d <= 5; d++) {
+        PERIODS.forEach(p => {
+          if (p.lunch) return;
+          const slot = classSchedule[String(d)] && classSchedule[String(d)][String(p.num)];
+          if (slot && slot.courses && slot.courses.length === 1) {
+            userSelections[`${d}_${p.num}`] = slot.courses[0].id;
+          }
+        });
+      }
+
+      renderElectiveList();
+    }
+
+    function renderElectiveList() {
+      const container = document.getElementById("elective-list");
+      if (!electiveGroups.length) {
+        container.innerHTML = `<p class="text-secondary">没有选修课需要选择</p>`;
+        document.getElementById("to-preview-btn").disabled = false;
+        return;
+      }
+
+      const dayNames = ["", t("monday"), t("tuesday"), t("wednesday"), t("thursday"), t("friday")];
+      container.innerHTML = electiveGroups.map((g, i) => {
+        // Show where this group appears
+        const locations = g.slotKeys.map(k => {
+          const [d, p] = k.split("_").map(Number);
+          const period = PERIODS.find(pp => pp.num === p);
+          return `${dayNames[d]} ${period.label || t("period") + p}`;
+        }).join("、");
+
+        const options = g.courses.map(c => {
+          const name = currentLang === "zh" ? c.name_cn : c.name_en;
+          const meta = [c.teacher, c.room].filter(Boolean).join(" · ");
+          const label = meta ? `${name}（${meta}）` : name;
+          const checked = userSelections[g.slotKeys[0]] === c.id ? "checked" : "";
+          return `<label style="display:block;padding:6px 12px;cursor:pointer;border-bottom:1px solid var(--border)"><input type="radio" name="elective-${i}" value="${c.id}" ${checked} onchange="selectElective(${i},this.value)" style="margin-right:8px">${label}</label>`;
+        }).join("");
+
+        const skipChecked = userSelections[g.slotKeys[0]] === "__skip__" ? "checked" : "";
+
+        return `<div class="card mb-16" style="padding:16px">
+          <div style="font-weight:600;margin-bottom:4px">选修组 ${i + 1}</div>
+          <div style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:8px">出现在：${locations}</div>
+          <div style="border:1px solid var(--border);border-radius:4px;overflow:hidden">
+            ${options}
+            <label style="display:block;padding:6px 12px;cursor:pointer;color:var(--text-secondary)"><input type="radio" name="elective-${i}" value="__skip__" ${skipChecked} onchange="selectElective(${i},'__skip__')" style="margin-right:8px">不参加</label>
+          </div>
+        </div>`;
+      }).join("");
+
+      checkElectivesComplete();
+    }
+
+    window.selectElective = function(groupIdx, courseId) {
+      const g = electiveGroups[groupIdx];
+      g.slotKeys.forEach(key => {
+        if (courseId === "__skip__") userSelections[key] = "__skip__";
+        else userSelections[key] = courseId;
+      });
+      saveSelections();
+      checkElectivesComplete();
+    };
+
+    function checkElectivesComplete() {
+      const allDone = electiveGroups.every(g => {
+        const val = userSelections[g.slotKeys[0]];
+        return val && val !== "";
+      });
+      document.getElementById("to-preview-btn").disabled = !allDone;
     }
 
     function renderUserSchedule() {
@@ -332,176 +426,54 @@
       head.innerHTML = `<tr><th>${t("period")}</th><th>${t("time")}</th>${days.map(d => `<th>${d}</th>`).join("")}</tr>`;
       body.innerHTML = "";
 
-      // Build a signature for each slot's course set (sorted IDs)
-      function slotSig(d, pNum) {
-        const slot = classSchedule[String(d)] && classSchedule[String(d)][String(pNum)];
-        if (!slot || !slot.courses || slot.courses.length <= 1) return null;
-        return slot.courses.map(c => c.id).sort().join(",");
-      }
-
-      // Pre-compute merge info: for each day, find consecutive periods with same courses
-      // mergeMap[d_p] = { skip: true } if merged into previous, or { rowspan: N } if start
-      const mergeMap = {};
-      for (let d = 1; d <= 5; d++) {
-        const activePeriods = PERIODS.filter(p => !p.lunch);
-        for (let i = 0; i < activePeriods.length; i++) {
-          const p = activePeriods[i];
-          const sig = slotSig(d, p.num);
-          if (!sig) continue;
-          let span = 1;
-          while (i + span < activePeriods.length) {
-            const np = activePeriods[i + span];
-            if (slotSig(d, np.num) === sig) span++;
-            else break;
-          }
-          if (span > 1) {
-            mergeMap[`${d}_${p.num}`] = { rowspan: span };
-            for (let j = 1; j < span; j++) {
-              mergeMap[`${d}_${activePeriods[i + j].num}`] = { skip: true };
-            }
-            i += span - 1; // skip merged periods
-          }
-        }
-      }
-
-      // Build signature-to-slotKeys map for linked selection
-      const sigSlots = {};
-      for (let d = 1; d <= 5; d++) {
-        PERIODS.forEach(p => {
-          const sig = slotSig(d, p.num);
-          if (!sig) return;
-          if (!sigSlots[sig]) sigSlots[sig] = [];
-          // Only add non-skipped or start-of-merge slots
-          const mk = mergeMap[`${d}_${p.num}`];
-          if (!mk || !mk.skip) sigSlots[sig].push(`${d}_${p.num}`);
-        });
-      }
-
       PERIODS.forEach(p => {
         const tr = document.createElement("tr");
         if (p.lunch) tr.classList.add("lunch-row");
 
-        // Period label
         const labelTd = document.createElement("td");
         labelTd.className = "period-label";
         const blockLabel = getBlockLabel(p.num);
         labelTd.textContent = blockLabel || (p.lunch ? t("lunch") : (p.label || `${t("period")} ${p.num}`));
         tr.appendChild(labelTd);
 
-        // Time
         const timeTd = document.createElement("td");
         timeTd.className = "period-label";
         timeTd.innerHTML = `<span class="period-time">${p.time}</span>`;
         tr.appendChild(timeTd);
 
-        // Day cells
         for (let d = 1; d <= 5; d++) {
-          const cellKey = `${d}_${p.num}`;
-          const mk = mergeMap[cellKey];
-
-          // Skip if merged into previous row
-          if (mk && mk.skip) continue;
-
           const td = document.createElement("td");
           td.className = "slot-cell";
-          if (mk && mk.rowspan > 1) td.rowSpan = mk.rowspan;
-
-          const slot = classSchedule[String(d)] && classSchedule[String(d)][String(p.num)];
-
           if (p.lunch) {
             td.textContent = t("lunch");
-          } else if (slot && slot.courses && slot.courses.length > 0) {
-            const slotKey = cellKey;
-            if (slot.courses.length === 1) {
-              // Only one course - auto-select
-              userSelections[slotKey] = slot.courses[0].id;
-              // Also set for merged periods
-              if (mk && mk.rowspan > 1) {
-                const activePeriods = PERIODS.filter(pp => !pp.lunch);
-                const startIdx = activePeriods.findIndex(pp => pp.num === p.num);
-                for (let j = 1; j < mk.rowspan; j++) {
-                  userSelections[`${d}_${activePeriods[startIdx + j].num}`] = slot.courses[0].id;
-                }
+          } else {
+            const slot = classSchedule[String(d)] && classSchedule[String(d)][String(p.num)];
+            const selId = userSelections[`${d}_${p.num}`];
+            if (slot && slot.courses && selId && selId !== "__skip__") {
+              const course = slot.courses.find(c => c.id === selId);
+              if (course) {
+                const tag = document.createElement("span");
+                tag.className = "course-tag selected";
+                const label = currentLang === "zh" ? course.name_cn : course.name_en;
+                const meta = [course.teacher, course.room].filter(Boolean).join(" · ");
+                tag.textContent = label;
+                if (meta) tag.title = meta;
+                td.appendChild(tag);
               }
+            } else if (slot && slot.courses && slot.courses.length === 1) {
+              const c = slot.courses[0];
               const tag = document.createElement("span");
               tag.className = "course-tag selected";
-              const c = slot.courses[0];
-              let label = currentLang === "zh" ? c.name_cn : c.name_en;
+              tag.textContent = currentLang === "zh" ? c.name_cn : c.name_en;
               const meta = [c.teacher, c.room].filter(Boolean).join(" · ");
-              if (meta) label += `\n${meta}`;
-              tag.textContent = label;
-              tag.style.whiteSpace = "pre-line";
+              if (meta) tag.title = meta;
               td.appendChild(tag);
-            } else {
-              // Multiple courses - show dropdown
-              const select = document.createElement("select");
-              select.style.width = "100%";
-              select.style.fontSize = "0.8rem";
-              const emptyOpt = document.createElement("option");
-              emptyOpt.value = "";
-              emptyOpt.textContent = `-- ${t("unselected")} --`;
-              select.appendChild(emptyOpt);
-              slot.courses.forEach(c => {
-                const opt = document.createElement("option");
-                opt.value = c.id;
-                const name = currentLang === "zh" ? c.name_cn : c.name_en;
-                const meta = [c.teacher, c.room].filter(Boolean).join(" · ");
-                opt.textContent = meta ? `${name} (${meta})` : name;
-                if (userSelections[slotKey] === c.id) opt.selected = true;
-                select.appendChild(opt);
-              });
-              const sig = slotSig(d, p.num);
-              select.onchange = () => {
-                if (select.value) userSelections[slotKey] = select.value;
-                else delete userSelections[slotKey];
-                // Set for merged periods
-                if (mk && mk.rowspan > 1) {
-                  const activePeriods = PERIODS.filter(pp => !pp.lunch);
-                  const startIdx = activePeriods.findIndex(pp => pp.num === p.num);
-                  for (let j = 1; j < mk.rowspan; j++) {
-                    const mKey = `${d}_${activePeriods[startIdx + j].num}`;
-                    if (select.value) userSelections[mKey] = select.value;
-                    else delete userSelections[mKey];
-                  }
-                }
-                // Linked selection: same course group in other slots
-                if (sig && sigSlots[sig]) {
-                  sigSlots[sig].forEach(otherKey => {
-                    if (otherKey === slotKey) return;
-                    if (select.value) userSelections[otherKey] = select.value;
-                    else delete userSelections[otherKey];
-                    // Also set for merged periods of the other slot
-                    const [od, op] = otherKey.split("_").map(Number);
-                    const omk = mergeMap[otherKey];
-                    if (omk && omk.rowspan > 1) {
-                      const activePeriods = PERIODS.filter(pp => !pp.lunch);
-                      const si = activePeriods.findIndex(pp => pp.num === op);
-                      for (let j = 1; j < omk.rowspan; j++) {
-                        const mmKey = `${od}_${activePeriods[si + j].num}`;
-                        if (select.value) userSelections[mmKey] = select.value;
-                        else delete userSelections[mmKey];
-                      }
-                    }
-                  });
-                  // Update other dropdowns visually
-                  document.querySelectorAll("select[data-sig='" + sig + "']").forEach(s => {
-                    if (s !== select) s.value = select.value;
-                  });
-                }
-                saveSelections();
-                checkAllSelected();
-              };
-              select.setAttribute("data-sig", sig || "");
-              td.appendChild(select);
             }
           }
-
           tr.appendChild(td);
         }
         body.appendChild(tr);
       });
-
-      checkAllSelected();
     }
 
     function getBlockLabel(period) {
@@ -510,22 +482,6 @@
         if (slot && slot.block_label) return slot.block_label;
       }
       return null;
-    }
-
-    function checkAllSelected() {
-      let allDone = true;
-      for (let d = 1; d <= 5; d++) {
-        for (const p of PERIODS) {
-          if (p.lunch) continue;
-          const slot = classSchedule[String(d)] && classSchedule[String(d)][String(p.num)];
-          if (slot && slot.courses && slot.courses.length > 1) {
-            const key = `${d}_${p.num}`;
-            if (!userSelections[key]) { allDone = false; break; }
-          }
-        }
-        if (!allDone) break;
-      }
-      document.getElementById("to-export-btn").disabled = !allDone;
     }
 
     function saveSelections() {
@@ -557,11 +513,6 @@
     /* ── Export ───────────────────────────────────── */
     let selectedPreset = "desktop";
 
-    function goToExport() {
-      goToStep(4);
-      renderExportPreview();
-    }
-
     function renderExportPreview() {
       const days = [t("monday"), t("tuesday"), t("wednesday"), t("thursday"), t("friday")];
       const head = document.getElementById("export-preview-head");
@@ -591,7 +542,7 @@
           else {
             const slot = classSchedule[String(d)] && classSchedule[String(d)][String(p.num)];
             const courseId = userSelections[`${d}_${p.num}`];
-            if (slot && courseId) {
+            if (slot && courseId && courseId !== "__skip__") {
               const course = slot.courses.find(c => c.id === courseId);
               if (course) {
                 td.textContent = currentLang === "zh" ? course.name_cn : course.name_en;
@@ -666,8 +617,8 @@
     window.addEventListener("langchange", () => {
       if (currentStep === 1) loadYears();
       if (currentStep === 2) loadClasses();
-      if (currentStep === 3) renderUserSchedule();
-      if (currentStep === 4) { renderExportPreview(); renderPresetOptions(); }
+      if (currentStep === 3) renderElectiveList();
+      if (currentStep === 4) { renderUserSchedule(); renderExportPreview(); renderPresetOptions(); }
     });
 
     /* ── Start ───────────────────────────────────── */
