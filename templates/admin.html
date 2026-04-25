@@ -201,15 +201,26 @@
 
     function buildLibrarySelect(selectId) {
       const id = selectId || "course-lib-select";
+      const searchId = id + "-search";
       const lib = loadCourseLibrary();
       if (!lib.length) return "";
       const opts = lib.map((c, i) => {
         const meta = [c.teacher, c.room].filter(Boolean).join(" · ");
         const label = c.name_cn + " / " + c.name_en + (meta ? " (" + meta + ")" : "");
-        return `<option value="${i}">${label}</option>`;
+        return `<option value="${i}" data-search="${(c.name_cn + c.name_en + c.teacher + c.room).toLowerCase()}">${label}</option>`;
       }).join("");
-      return `<div class="form-group"><label>${t("select_from_library")}</label><select id="${id}" onchange="fillFromLibrary('${id}')"><option value="">${t("manual_input")}</option>${opts}</select></div>`;
+      return `<div class="form-group"><label>${t("select_from_library")}</label><input type="text" id="${searchId}" placeholder="🔍" style="margin-bottom:6px" oninput="filterLibSelect('${id}','${searchId}')"><select id="${id}" onchange="fillFromLibrary('${id}')"><option value="">${t("manual_input")}</option>${opts}</select></div>`;
     }
+
+    window.filterLibSelect = function(selId, searchId) {
+      const q = (document.getElementById(searchId).value || "").toLowerCase();
+      const sel = document.getElementById(selId);
+      if (!sel) return;
+      Array.from(sel.options).forEach(opt => {
+        if (opt.value === "") return; // keep manual input option
+        opt.style.display = !q || (opt.dataset.search && opt.dataset.search.includes(q)) ? "" : "none";
+      });
+    };
 
     function fillFromLibrary(selectId) {
       const id = selectId || "course-lib-select";
