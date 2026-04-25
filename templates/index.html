@@ -336,7 +336,6 @@
       const sigMap = {};
       for (let d = 1; d <= 5; d++) {
         PERIODS.forEach(p => {
-          if (p.lunch) return;
           const slot = classSchedule[String(d)] && classSchedule[String(d)][String(p.num)];
           if (!slot || !slot.courses || slot.courses.length <= 1) return;
           const sig = slot.courses.map(c => c.name_cn).sort().join(",");
@@ -349,7 +348,6 @@
       // Auto-select single-course slots
       for (let d = 1; d <= 5; d++) {
         PERIODS.forEach(p => {
-          if (p.lunch) return;
           const slot = classSchedule[String(d)] && classSchedule[String(d)][String(p.num)];
           if (slot && slot.courses && slot.courses.length === 1) {
             userSelections[`${d}_${p.num}`] = slot.courses[0].id;
@@ -385,6 +383,8 @@
           return `<label style="display:block;padding:6px 12px;cursor:pointer;border-bottom:1px solid var(--border)"><input type="radio" name="elective-${i}" value="${c.name_cn}" ${checked} onchange="selectElective(${i},this.value)" style="margin-right:8px">${label}</label>`;
         }).join("");
 
+        // Only show skip option for groups with >2 courses (mandatory either/or choices don't get skip)
+        const showSkip = g.courses.length > 2;
         const skipChecked = userSelections[g.slotKeys[0]] === "__skip__" ? "checked" : "";
 
         return `<div class="card mb-16" style="padding:16px">
@@ -392,7 +392,7 @@
           <div style="font-size:0.8rem;color:var(--text-secondary);margin-bottom:8px">出现在：${locations}</div>
           <div style="border:1px solid var(--border);border-radius:4px;overflow:hidden">
             ${options}
-            <label style="display:block;padding:6px 12px;cursor:pointer;color:var(--text-secondary)"><input type="radio" name="elective-${i}" value="__skip__" ${skipChecked} onchange="selectElective(${i},'__skip__')" style="margin-right:8px">不参加</label>
+            ${showSkip ? `<label style="display:block;padding:6px 12px;cursor:pointer;color:var(--text-secondary)"><input type="radio" name="elective-${i}" value="__skip__" ${skipChecked} onchange="selectElective(${i},'__skip__')" style="margin-right:8px">不参加</label>` : ""}
           </div>
         </div>`;
       }).join("");
@@ -445,7 +445,32 @@
           const td = document.createElement("td");
           td.className = "slot-cell";
           if (p.lunch) {
-            td.textContent = t("lunch");
+            // Check if lunch slot has courses
+            const slot = classSchedule[String(d)] && classSchedule[String(d)][String(p.num)];
+            if (slot && slot.courses && slot.courses.length > 0) {
+              const selId = userSelections[`${d}_${p.num}`];
+              if (selId && selId !== "__skip__") {
+                const course = slot.courses.find(c => c.name_cn === selId || c.id === selId);
+                if (course) {
+                  const tag = document.createElement("span");
+                  tag.className = "course-tag selected";
+                  tag.textContent = currentLang === "zh" ? course.name_cn : course.name_en;
+                  const meta = [course.teacher, course.room].filter(Boolean).join(" · ");
+                  if (meta) tag.title = meta;
+                  td.appendChild(tag);
+                }
+              } else if (slot.courses.length === 1) {
+                const c = slot.courses[0];
+                const tag = document.createElement("span");
+                tag.className = "course-tag selected";
+                tag.textContent = currentLang === "zh" ? c.name_cn : c.name_en;
+                td.appendChild(tag);
+              } else {
+                td.textContent = t("lunch");
+              }
+            } else {
+              td.textContent = t("lunch");
+            }
           } else {
             const slot = classSchedule[String(d)] && classSchedule[String(d)][String(p.num)];
             const selId = userSelections[`${d}_${p.num}`];
@@ -538,7 +563,19 @@
 
         for (let d = 1; d <= 5; d++) {
           const td = document.createElement("td");
-          if (p.lunch) { td.textContent = t("lunch"); }
+          if (p.lunch) {
+            const slot = classSchedule[String(d)] && classSchedule[String(d)][String(p.num)];
+            const courseId = userSelections[`${d}_${p.num}`];
+            if (slot && courseId && courseId !== "__skip__") {
+              const course = slot.courses.find(c => c.name_cn === courseId || c.id === courseId);
+              if (course) td.textContent = currentLang === "zh" ? course.name_cn : course.name_en;
+              else td.textContent = t("lunch");
+            } else if (slot && slot.courses && slot.courses.length === 1) {
+              td.textContent = currentLang === "zh" ? slot.courses[0].name_cn : slot.courses[0].name_en;
+            } else {
+              td.textContent = t("lunch");
+            }
+          }
           else {
             const slot = classSchedule[String(d)] && classSchedule[String(d)][String(p.num)];
             const courseId = userSelections[`${d}_${p.num}`];
