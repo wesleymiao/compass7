@@ -311,92 +311,36 @@
 
     function addCourseGroup(day, period) {
       const groups = loadCourseGroups();
-      const opts = groups.map((g, i) => {
+      if (!groups.length) return showManageGroups();
+      const searchId = "add-group-search";
+      const listId = "add-group-list";
+      const items = groups.map((g, i) => {
         const courses = g.courses.map(c => c.name_cn).join("、");
-        return `<option value="${i}">${g.name}（${courses}）</option>`;
+        return `<div data-search="${(g.name + courses).toLowerCase()}" style="padding:6px 8px;cursor:pointer;border-bottom:1px solid var(--border);font-size:0.85rem" onmouseover="this.style.background='var(--bg-secondary)'" onmouseout="this.style.background=''" onclick="addGroupToSlot(${day},${period},${i})"><strong>${g.name}</strong><br><span style="font-size:0.8rem;color:var(--text-secondary)">${courses}</span></div>`;
       }).join("");
       showModal(t("add_course_group"), `
-        <div class="form-group"><label>${t("course_group")}</label><select id="group-select" onchange="toggleManualGroupInput()"><option value="">${t("manual_input")}</option>${opts}</select></div>
-        <div id="manual-group-area" style="display:block;">
-          <div id="manual-group-list" style="margin-bottom:8px;"></div>
-          ${buildLibrarySelect("manual-lib-select")}
-          <div class="form-group"><label>${t("course_name_cn")}</label><input type="text" id="mg-cn"></div>
-          <div class="form-group"><label>${t("course_name_en")}</label><input type="text" id="mg-en"></div>
-          <div class="form-group"><label>${t("teacher")}</label><input type="text" id="mg-teacher"></div>
-          <div class="form-group"><label>${t("classroom")}</label><input type="text" id="mg-room"></div>
-          <button type="button" class="btn btn-secondary btn-sm" onclick="manualGroupAddCourse()">+ ${t("add_course")}</button>
-        </div>
-      `, () => {
-        const sel = document.getElementById("group-select");
-        if (sel.value !== "") {
-          // From saved group
-          const group = groups[parseInt(sel.value)];
-          if (!scheduleData[String(day)]) scheduleData[String(day)] = {};
-          if (!scheduleData[String(day)][String(period)]) scheduleData[String(day)][String(period)] = { block_label: null, courses: [] };
-          group.courses.forEach(c => {
-            scheduleData[String(day)][String(period)].courses.push({
-              id: Math.random().toString(36).substr(2, 8),
-              name_cn: c.name_cn, name_en: c.name_en,
-              teacher: c.teacher || "", room: c.room || ""
-            });
-          });
-        } else {
-          // Manual input
-          if (!window._manualGroupCourses || !window._manualGroupCourses.length) return showToast(t("error_required"), "error");
-          if (!scheduleData[String(day)]) scheduleData[String(day)] = {};
-          if (!scheduleData[String(day)][String(period)]) scheduleData[String(day)][String(period)] = { block_label: null, courses: [] };
-          window._manualGroupCourses.forEach(c => {
-            scheduleData[String(day)][String(period)].courses.push({
-              id: Math.random().toString(36).substr(2, 8),
-              name_cn: c.name_cn, name_en: c.name_en,
-              teacher: c.teacher || "", room: c.room || ""
-            });
-            saveCourseToLibrary(c);
-          });
-        }
-        window._manualGroupCourses = [];
-        closeModal();
-        renderScheduleGrid();
+        <input type="text" id="${searchId}" placeholder="🔍" style="margin-bottom:6px" oninput="filterLibList('${listId}','${searchId}')">
+        <div id="${listId}" style="max-height:300px;overflow-y:auto;border:1px solid var(--border);border-radius:4px">${items}</div>
+      `, null);
+      document.getElementById("modal-save").style.display = "none";
+    }
+
+    window.addGroupToSlot = function(day, period, idx) {
+      const groups = loadCourseGroups();
+      const group = groups[idx];
+      if (!group) return;
+      if (!scheduleData[String(day)]) scheduleData[String(day)] = {};
+      if (!scheduleData[String(day)][String(period)]) scheduleData[String(day)][String(period)] = { block_label: null, courses: [] };
+      group.courses.forEach(c => {
+        scheduleData[String(day)][String(period)].courses.push({
+          id: Math.random().toString(36).substr(2, 8),
+          name_cn: c.name_cn, name_en: c.name_en,
+          teacher: c.teacher || "", room: c.room || ""
+        });
       });
-      window._manualGroupCourses = [];
-      toggleManualGroupInput();
-    }
-
-    window.toggleManualGroupInput = function() {
-      const sel = document.getElementById("group-select");
-      const area = document.getElementById("manual-group-area");
-      if (area) area.style.display = sel && sel.value === "" ? "block" : "none";
+      closeModal();
+      renderScheduleGrid();
     };
-
-    window.manualGroupAddCourse = function() {
-      const cn = document.getElementById("mg-cn").value.trim();
-      const en = document.getElementById("mg-en").value.trim();
-      if (!cn || !en) return showToast(t("error_required"), "error");
-      const c = {
-        name_cn: cn, name_en: en,
-        teacher: document.getElementById("mg-teacher").value.trim(),
-        room: document.getElementById("mg-room").value.trim()
-      };
-      if (!window._manualGroupCourses) window._manualGroupCourses = [];
-      window._manualGroupCourses.push(c);
-      document.getElementById("mg-cn").value = "";
-      document.getElementById("mg-en").value = "";
-      document.getElementById("mg-teacher").value = "";
-      document.getElementById("mg-room").value = "";
-      renderManualGroupList();
-    };
-
-    function renderManualGroupList() {
-      const el = document.getElementById("manual-group-list");
-      if (!el) return;
-      const courses = window._manualGroupCourses || [];
-      if (!courses.length) { el.innerHTML = ""; return; }
-      el.innerHTML = courses.map((c, i) => {
-        const meta = [c.teacher, c.room].filter(Boolean).join(" · ");
-        return `<span class="course-tag" style="cursor:pointer;" title="${meta}" onclick="window._manualGroupCourses.splice(${i},1);renderManualGroupList();">${c.name_cn} ✕</span>`;
-      }).join(" ");
-    }
-    window.renderManualGroupList = renderManualGroupList;
 
     const PERIODS = [
       { num: 1, time: "8:00-8:40" },
@@ -659,8 +603,18 @@
     }
 
     function addCourse(day, period) {
+      const lib = loadCourseLibrary();
+      const searchId = "add-course-search";
+      const listId = "add-course-list";
+      const items = lib.map((c, i) => {
+        const meta = [c.teacher, c.room].filter(Boolean).join(" · ");
+        const label = c.name_cn + " / " + c.name_en + (meta ? " (" + meta + ")" : "");
+        return `<div data-search="${(c.name_cn + c.name_en + (c.teacher||'') + (c.room||'')).toLowerCase()}" style="padding:6px 8px;cursor:pointer;border-bottom:1px solid var(--border);font-size:0.85rem" onmouseover="this.style.background='var(--bg-secondary)'" onmouseout="this.style.background=''" onclick="addCourseFromLib(${day},${period},${i})">${label}</div>`;
+      }).join("");
+      const listHtml = lib.length ? `<input type="text" id="${searchId}" placeholder="🔍" style="margin-bottom:6px" oninput="filterLibList('${listId}','${searchId}')"><div id="${listId}" style="max-height:250px;overflow-y:auto;border:1px solid var(--border);border-radius:4px">${items}</div>` : "";
       showModal(t("add_course"), `
-        ${buildLibrarySelect()}
+        ${listHtml}
+        <hr style="margin:12px 0;border-color:var(--border)">
         <div class="form-group"><label>${t("course_name_cn")}</label><input type="text" id="course-cn"></div>
         <div class="form-group"><label>${t("course_name_en")}</label><input type="text" id="course-en"></div>
         <div class="form-group"><label>${t("teacher")}</label><input type="text" id="course-teacher"></div>
@@ -675,10 +629,7 @@
         if (!scheduleData[String(day)][String(period)]) scheduleData[String(day)][String(period)] = { block_label: null, courses: [] };
         const course = {
           id: Math.random().toString(36).substr(2, 8),
-          name_cn: cn,
-          name_en: en,
-          teacher: teacher || "",
-          room: room || ""
+          name_cn: cn, name_en: en, teacher: teacher || "", room: room || ""
         };
         scheduleData[String(day)][String(period)].courses.push(course);
         saveCourseToLibrary(course);
@@ -686,6 +637,21 @@
         renderScheduleGrid();
       });
     }
+
+    window.addCourseFromLib = function(day, period, idx) {
+      const lib = loadCourseLibrary();
+      const c = lib[idx];
+      if (!c) return;
+      if (!scheduleData[String(day)]) scheduleData[String(day)] = {};
+      if (!scheduleData[String(day)][String(period)]) scheduleData[String(day)][String(period)] = { block_label: null, courses: [] };
+      scheduleData[String(day)][String(period)].courses.push({
+        id: Math.random().toString(36).substr(2, 8),
+        name_cn: c.name_cn, name_en: c.name_en,
+        teacher: c.teacher || "", room: c.room || ""
+      });
+      closeModal();
+      renderScheduleGrid();
+    };
 
     function editCourse(day, period, idx) {
       const slot = scheduleData[String(day)][String(period)];
