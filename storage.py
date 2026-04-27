@@ -172,11 +172,31 @@ def create_class(year_id: str, name: str):
     for c in year["classes"]:
         if c["name"] == name:
             return None
+    # Build initial schedule from elective slots of existing classes
+    initial_schedule = {}
+    if year["classes"]:
+        ref = year["classes"][0]["schedule"]
+        for day, periods in ref.items():
+            for period, slot in periods.items():
+                courses = slot.get("courses", [])
+                if len(courses) > 1:
+                    # Elective slot — copy with new IDs
+                    if day not in initial_schedule:
+                        initial_schedule[day] = {}
+                    new_courses = [
+                        {"id": gen_id(), "name_cn": c["name_cn"], "name_en": c["name_en"],
+                         "teacher": c.get("teacher", ""), "room": c.get("room", "")}
+                        for c in courses
+                    ]
+                    initial_schedule[day][period] = {
+                        "block_label": slot.get("block_label"),
+                        "courses": new_courses
+                    }
     class_id = gen_id()
     class_data = {
         "id": class_id,
         "name": name,
-        "schedule": {}
+        "schedule": initial_schedule
     }
     year["classes"].append(class_data)
     _write_blob(f"years/{year_id}.json", year)
