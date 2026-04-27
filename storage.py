@@ -268,11 +268,15 @@ def save_selections(user_id: str, data: dict):
     _write_blob(f"selections/{user_id}.json", data)
 
 
-# ── Course Groups (per class) ────────────────────────────
+# ── Course Groups (per year, shared across all classes) ───
 
-def get_course_groups(year_id: str, class_id: str):
-    return _read_blob(f"course_groups/{year_id}/{class_id}.json", default=[])
+def get_course_groups(year_id: str, class_id: str = None):
+    """Get course groups for a year. class_id is accepted but ignored (backward compat)."""
+    return _read_blob(f"course_groups/{year_id}.json", default=[])
 
 
-def save_course_groups(year_id: str, class_id: str, groups: list):
-    _write_blob(f"course_groups/{year_id}/{class_id}.json", groups)
+def save_course_groups(year_id: str, class_id: str = None, groups: list = None):
+    """Save course groups for a year. class_id is accepted but ignored (backward compat)."""
+    if groups is None:
+        groups = []
+    _write_blob(f"course_groups/{year_id}.json", groups)
