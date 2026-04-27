@@ -179,7 +179,7 @@ def create_class(year_id: str, name: str):
         for day, periods in ref.items():
             for period, slot in periods.items():
                 courses = slot.get("courses", [])
-                if len(courses) > 1:
+                if len(courses) > 2:
                     # Elective slot — copy with new IDs
                     if day not in initial_schedule:
                         initial_schedule[day] = {}
