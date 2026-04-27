@@ -43,25 +43,37 @@
       <div id="class-list" class="mt-16"></div>
     </div>
 
-    <!-- Step 3: Course Selection -->
+    <!-- Step 3: Course Selection + Live Preview -->
     <div id="step-3" class="hidden">
       <div class="flex-between mb-16">
         <h2 data-i18n="select_courses">请为每个时间段选择课程</h2>
       </div>
-      <div id="elective-list" class="mt-16"></div>
-      <button class="btn btn-primary mt-16" id="to-preview-btn" disabled onclick="goToStep(4);renderUserSchedule();renderExportPreview();" style="width:100%">查看课表预览 →</button>
+      <div class="split-pane">
+        <div class="split-left" id="elective-panel">
+          <div id="elective-list"></div>
+        </div>
+        <div class="split-right" id="preview-panel">
+          <h3 style="margin:0 0 8px 0" data-i18n="preview">课表预览</h3>
+          <div class="schedule-wrapper">
+            <table class="schedule-grid" id="user-schedule-table">
+              <thead id="user-schedule-head"></thead>
+              <tbody id="user-schedule-body"></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
     </div>
 
-    <!-- Step 4: Preview & Export -->
+    <!-- Step 4: Export -->
     <div id="step-4" class="hidden">
       <div class="flex-between mb-16">
         <h2 data-i18n="preview">课表预览</h2>
         <button class="btn btn-secondary" onclick="goToStep(3)">← 返回选课</button>
       </div>
       <div class="schedule-wrapper">
-        <table class="schedule-grid" id="user-schedule-table">
-          <thead id="user-schedule-head"></thead>
-          <tbody id="user-schedule-body"></tbody>
+        <table class="schedule-grid" id="final-schedule-table">
+          <thead id="final-schedule-head"></thead>
+          <tbody id="final-schedule-body"></tbody>
         </table>
       </div>
       <h2 class="mt-24 mb-16" data-i18n="export_title">导出课表</h2>
@@ -356,13 +368,13 @@
       }
 
       renderElectiveList();
+      renderUserSchedule();
     }
 
     function renderElectiveList() {
       const container = document.getElementById("elective-list");
       if (!electiveGroups.length) {
-        container.innerHTML = `<p class="text-secondary">没有选修课需要选择</p>`;
-        document.getElementById("to-preview-btn").disabled = false;
+        container.innerHTML = `<p class="text-secondary">没有选修课需要选择</p><button class="btn btn-primary mt-16" onclick="goToStep(4);renderFinalSchedule();renderExportPreview();" style="width:100%">导出课表 →</button>`;
         return;
       }
 
@@ -395,7 +407,7 @@
             ${showSkip ? `<label style="display:block;padding:6px 12px;cursor:pointer;color:var(--text-secondary)"><input type="radio" name="elective-${i}" value="__skip__" ${skipChecked} onchange="selectElective(${i},'__skip__')" style="margin-right:8px">不参加</label>` : ""}
           </div>
         </div>`;
-      }).join("");
+      }).join("") + `<button class="btn btn-primary mt-16" id="to-export-btn" disabled onclick="goToStep(4);renderFinalSchedule();renderExportPreview();" style="width:100%">导出课表 →</button>`;
 
       checkElectivesComplete();
     }
@@ -408,6 +420,7 @@
       });
       saveSelections();
       checkElectivesComplete();
+      renderUserSchedule();
     };
 
     function checkElectivesComplete() {
@@ -415,13 +428,23 @@
         const val = userSelections[g.slotKeys[0]];
         return val && val !== "";
       });
-      document.getElementById("to-preview-btn").disabled = !allDone;
+      const btn = document.getElementById("to-export-btn");
+      if (btn) btn.disabled = !allDone;
+    }
+
+    function renderFinalSchedule() {
+      renderScheduleInto("final-schedule-head", "final-schedule-body");
     }
 
     function renderUserSchedule() {
+      renderScheduleInto("user-schedule-head", "user-schedule-body");
+    }
+
+    function renderScheduleInto(headId, bodyId) {
       const days = [t("monday"), t("tuesday"), t("wednesday"), t("thursday"), t("friday")];
-      const head = document.getElementById("user-schedule-head");
-      const body = document.getElementById("user-schedule-body");
+      const head = document.getElementById(headId);
+      const body = document.getElementById(bodyId);
+      if (!head || !body) return;
 
       head.innerHTML = `<tr><th>${t("period")}</th><th>${t("time")}</th>${days.map(d => `<th>${d}</th>`).join("")}</tr>`;
       body.innerHTML = "";
@@ -654,8 +677,8 @@
     window.addEventListener("langchange", () => {
       if (currentStep === 1) loadYears();
       if (currentStep === 2) loadClasses();
-      if (currentStep === 3) renderElectiveList();
-      if (currentStep === 4) { renderUserSchedule(); renderExportPreview(); renderPresetOptions(); }
+      if (currentStep === 3) { renderElectiveList(); renderUserSchedule(); }
+      if (currentStep === 4) { renderFinalSchedule(); renderExportPreview(); renderPresetOptions(); }
     });
 
     /* ── Start ───────────────────────────────────── */

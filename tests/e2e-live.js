@@ -634,16 +634,16 @@ async function addCourseAtSlot(page, day, period, nameCn, nameEn, teacher, room)
 
     await shot(page, '15-user-schedule');
 
-    // Click preview button to go to step 4
-    const previewBtn = page.locator('#to-preview-btn');
-    assert(!(await previewBtn.isDisabled()), 'Preview button should be enabled after selecting all');
-    await previewBtn.click();
-    await page.waitForTimeout(1000);
-
-    // Step 4: should show schedule preview with selected courses
+    // Live preview should show selected courses (split pane layout)
     const tags = await page.locator('#user-schedule-table .course-tag').count();
     console.log(`    Preview course tags: ${tags}`);
-    assert(tags > 0, 'Preview should show selected courses');
+    assert(tags > 0, 'Live preview should show selected courses');
+
+    // Click export button to go to step 4
+    const exportBtn = page.locator('#to-export-btn');
+    assert(!(await exportBtn.isDisabled()), 'Export button should be enabled after selecting all');
+    await exportBtn.click();
+    await page.waitForTimeout(1000);
 
     await shot(page, '16-user-dropdowns');
     await page.close();

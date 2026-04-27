@@ -590,3 +590,47 @@ input:focus, select:focus {
 .flex-between { display: flex; justify-content: space-between; align-items: center; }
 .flex-wrap { flex-wrap: wrap; }
 .inline-flex { display: inline-flex; align-items: center; gap: 6px; }
+
+/* ── Split Pane (elective selection + live preview) ── */
+.split-pane {
+  display: flex;
+  gap: 24px;
+  align-items: flex-start;
+}
+.split-left {
+  flex: 0 0 360px;
+  max-height: calc(100vh - 160px);
+  overflow-y: auto;
+}
+.split-right {
+  flex: 1;
+  position: sticky;
+  top: 80px;
+  background: var(--bg-card);
+  border-radius: var(--radius);
+  padding: 16px;
+  box-shadow: var(--shadow);
+  max-height: calc(100vh - 160px);
+  overflow-y: auto;
+}
+.split-right .schedule-wrapper {
+  overflow-x: auto;
+}
+.split-left .export-btn-row {
+  margin-top: 16px;
+}
+@media (max-width: 900px) {
+  .split-pane {
+    flex-direction: column;
+  }
+  .split-left {
+    flex: none;
+    width: 100%;
+    max-height: none;
+  }
+  .split-right {
+    position: static;
+    width: 100%;
+    max-height: none;
+  }
+}
