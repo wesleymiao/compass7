@@ -238,6 +238,24 @@ def admin_save_course_groups(year_id, class_id):
     return jsonify({"message": "Course groups saved"})
 
 
+# ── Admin: Course Library ────────────────────────────
+
+@app.route("/api/admin/years/<year_id>/course-library", methods=["GET"])
+@admin_required
+def admin_get_course_library(year_id):
+    library = storage.get_course_library(year_id)
+    return jsonify({"library": library})
+
+
+@app.route("/api/admin/years/<year_id>/course-library", methods=["PUT"])
+@admin_required
+def admin_save_course_library(year_id):
+    data = request.get_json()
+    library = data.get("library", [])
+    storage.save_course_library(year_id, library)
+    return jsonify({"message": "Course library saved"})
+
+
 @app.route("/api/admin/classes/<year_id>/<class_id>/slot", methods=["PUT"])
 @admin_required
 def admin_update_slot(year_id, class_id):

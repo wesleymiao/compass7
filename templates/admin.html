@@ -112,21 +112,36 @@
     let scheduleData = {};
 
     /* ── Course Library ─────────────────────────── */
-    const COURSE_LIB_KEY = "compass7_course_library";
+    let _courseLibraryCache = [];
 
     function loadCourseLibrary() {
-      try { return JSON.parse(localStorage.getItem(COURSE_LIB_KEY)) || []; }
-      catch { return []; }
+      return _courseLibraryCache;
+    }
+
+    async function fetchCourseLibrary() {
+      if (!selectedYear) return;
+      try {
+        const data = await apiCall(`/api/admin/years/${selectedYear.id}/course-library`);
+        _courseLibraryCache = data.library || [];
+      } catch { _courseLibraryCache = []; }
+    }
+
+    async function saveCourseLibraryToServer() {
+      if (!selectedYear) return;
+      await apiCall(`/api/admin/years/${selectedYear.id}/course-library`, {
+        method: "PUT", body: JSON.stringify({ library: _courseLibraryCache })
+      });
     }
 
     function saveCourseToLibrary(c) {
-      const lib = loadCourseLibrary();
+      const lib = _courseLibraryCache;
       const key = c.name_cn + "|" + c.name_en;
       const idx = lib.findIndex(x => x.name_cn + "|" + x.name_en === key);
       const entry = { name_cn: c.name_cn, name_en: c.name_en, teacher: c.teacher || "", room: c.room || "" };
       if (idx >= 0) lib[idx] = entry; else lib.push(entry);
       lib.sort((a, b) => a.name_cn.localeCompare(b.name_cn, "zh"));
-      localStorage.setItem(COURSE_LIB_KEY, JSON.stringify(lib));
+      _courseLibraryCache = lib;
+      saveCourseLibraryToServer();
     }
 
     function showManageCourses() {
@@ -162,7 +177,8 @@
     function deleteLibraryCourse(idx) {
       const lib = loadCourseLibrary();
       lib.splice(idx, 1);
-      localStorage.setItem(COURSE_LIB_KEY, JSON.stringify(lib));
+      _courseLibraryCache = lib;
+      saveCourseLibraryToServer();
       showManageCourses();
     }
 
@@ -200,7 +216,8 @@
         const en = document.getElementById("course-en").value.trim();
         if (!cn || !en) return showToast(t("error_required"), "error");
         lib[idx] = { name_cn: cn, name_en: en, teacher: document.getElementById("course-teacher").value.trim(), room: document.getElementById("course-room").value.trim() };
-        localStorage.setItem(COURSE_LIB_KEY, JSON.stringify(lib));
+        _courseLibraryCache = lib;
+        saveCourseLibraryToServer();
         closeModal();
         showManageCourses();
       });
@@ -444,6 +461,7 @@
       document.getElementById("editor-placeholder").classList.remove("hidden");
       loadYears();
       loadClasses();
+      fetchCourseLibrary();
     }
 
     function showAddYear() {
@@ -529,10 +547,22 @@
       const data = await apiCall(`/api/admin/classes/${selectedYear.id}/${selectedClass.id}/schedule`);
       scheduleData = data.schedule || {};
       // Auto-populate course library from loaded schedule
+      let libChanged = false;
+      const lib = _courseLibraryCache;
       for (const day of Object.values(scheduleData)) {
         for (const period of Object.values(day)) {
-          (period.courses || []).forEach(c => saveCourseToLibrary(c));
+          (period.courses || []).forEach(c => {
+            const key = c.name_cn + "|" + c.name_en;
+            const idx = lib.findIndex(x => x.name_cn + "|" + x.name_en === key);
+            const entry = { name_cn: c.name_cn, name_en: c.name_en, teacher: c.teacher || "", room: c.room || "" };
+            if (idx >= 0) lib[idx] = entry; else { lib.push(entry); libChanged = true; }
+          });
         }
+      }
+      if (libChanged) {
+        lib.sort((a, b) => a.name_cn.localeCompare(b.name_cn, "zh"));
+        _courseLibraryCache = lib;
+        saveCourseLibraryToServer();
       }
       document.getElementById("editor-placeholder").classList.add("hidden");
       document.getElementById("schedule-editor").classList.remove("hidden");

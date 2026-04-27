@@ -280,3 +280,13 @@ def save_course_groups(year_id: str, class_id: str = None, groups: list = None):
     if groups is None:
         groups = []
     _write_blob(f"course_groups/{year_id}.json", groups)
+
+
+# ── Course Library (per year, shared across all classes) ───
+
+def get_course_library(year_id: str):
+    return _read_blob(f"course_library/{year_id}.json", default=[])
+
+
+def save_course_library(year_id: str, library: list):
+    _write_blob(f"course_library/{year_id}.json", library)
