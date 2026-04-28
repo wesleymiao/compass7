@@ -67,18 +67,18 @@
     <!-- Step 4: Export -->
     <div id="step-4" class="hidden">
       <div class="flex-between mb-16">
-        <h2 data-i18n="preview">课表预览</h2>
+        <h2 data-i18n="export_title">导出课表</h2>
         <button class="btn btn-secondary" onclick="goToStep(3)">← 返回选课</button>
       </div>
+
       <div class="schedule-wrapper">
-        <table class="schedule-grid" id="final-schedule-table">
-          <thead id="final-schedule-head"></thead>
-          <tbody id="final-schedule-body"></tbody>
+        <table class="schedule-grid" id="export-preview-table">
+          <thead id="export-preview-head"></thead>
+          <tbody id="export-preview-body"></tbody>
         </table>
       </div>
-      <h2 class="mt-24 mb-16" data-i18n="export_title">导出课表</h2>
 
-      <div class="export-options">
+      <div class="export-options mt-24">
         <div class="export-option" onclick="showExportImage()">
           <div class="icon">📷</div>
           <div data-i18n="export_image">导出为图片</div>
@@ -93,19 +93,6 @@
         </div>
       </div>
 
-      <!-- Image export settings -->
-      <div id="image-export-panel" class="card hidden mt-16">
-        <h3 data-i18n="export_image">导出为图片</h3>
-        <div class="export-options mt-16" id="preset-options"></div>
-        <div id="custom-size" class="hidden mt-8" style="display:flex;gap:12px">
-          <div class="form-group" style="flex:1"><label data-i18n="width">宽度</label><input type="number" id="custom-w" value="1920"></div>
-          <div class="form-group" style="flex:1"><label data-i18n="height">高度</label><input type="number" id="custom-h" value="1080"></div>
-        </div>
-        <button class="btn btn-secondary mt-16" onclick="previewImage()" data-i18n="preview">预览</button>
-        <div id="image-preview" class="preview-container hidden mt-16"></div>
-        <button class="btn btn-primary mt-16 hidden" id="download-img-btn" onclick="downloadImage()" data-i18n="download">下载完整图片</button>
-      </div>
-
       <!-- ICS export settings -->
       <div id="ics-export-panel" class="card hidden mt-16">
         <h3 data-i18n="export_ics">导出为日历</h3>
@@ -114,16 +101,6 @@
           <div class="form-group" style="flex:1"><label data-i18n="semester_end">学期结束日期</label><input type="date" id="ics-end"></div>
         </div>
         <button class="btn btn-primary mt-8" onclick="doExportICS()" data-i18n="generate_ics">生成日历文件</button>
-      </div>
-
-      <div class="mt-24">
-        <h3 class="mb-8" data-i18n="preview">预览</h3>
-        <div class="schedule-wrapper">
-          <table class="schedule-grid" id="export-preview-table">
-            <thead id="export-preview-head"></thead>
-            <tbody id="export-preview-body"></tbody>
-          </table>
-        </div>
       </div>
     </div>
   </main>
@@ -374,7 +351,7 @@
     function renderElectiveList() {
       const container = document.getElementById("elective-list");
       if (!electiveGroups.length) {
-        container.innerHTML = `<p class="text-secondary">没有选修课需要选择</p><button class="btn btn-primary mt-16" onclick="goToStep(4);renderFinalSchedule();renderExportPreview();" style="width:100%">导出课表 →</button>`;
+        container.innerHTML = `<p class="text-secondary">没有选修课需要选择</p><button class="btn btn-primary mt-16" onclick="goToStep(4);renderExportPreview();" style="width:100%">导出课表 →</button>`;
         return;
       }
 
@@ -407,7 +384,7 @@
             ${showSkip ? `<label style="display:block;padding:6px 12px;cursor:pointer;color:var(--text-secondary)"><input type="radio" name="elective-${i}" value="__skip__" ${skipChecked} onchange="selectElective(${i},'__skip__')" style="margin-right:8px">不参加</label>` : ""}
           </div>
         </div>`;
-      }).join("") + `<button class="btn btn-primary mt-16" id="to-export-btn" disabled onclick="goToStep(4);renderFinalSchedule();renderExportPreview();" style="width:100%">导出课表 →</button>`;
+      }).join("") + `<button class="btn btn-primary mt-16" id="to-export-btn" disabled onclick="goToStep(4);renderExportPreview();" style="width:100%">导出课表 →</button>`;
 
       checkElectivesComplete();
     }
@@ -430,10 +407,6 @@
       });
       const btn = document.getElementById("to-export-btn");
       if (btn) btn.disabled = !allDone;
-    }
-
-    function renderFinalSchedule() {
-      renderScheduleInto("final-schedule-head", "final-schedule-body");
     }
 
     function renderUserSchedule() {
@@ -559,7 +532,6 @@
     }
 
     /* ── Export ───────────────────────────────────── */
-    let selectedPreset = "desktop";
 
     function renderExportPreview() {
       const days = [t("monday"), t("tuesday"), t("wednesday"), t("thursday"), t("friday")];
@@ -616,44 +588,13 @@
     }
 
     function showExportImage() {
-      const panel = document.getElementById("image-export-panel");
-      panel.classList.toggle("hidden");
-      document.getElementById("ics-export-panel").classList.add("hidden");
-      renderPresetOptions();
-    }
-
-    function renderPresetOptions() {
-      const container = document.getElementById("preset-options");
-      container.innerHTML = "";
-      for (const [key, val] of Object.entries(IMAGE_PRESETS)) {
-        const div = document.createElement("div");
-        div.className = `export-option${selectedPreset === key ? " selected" : ""}`;
-        div.innerHTML = `<div>${t(val.label)}</div>${val.w ? `<div class="text-secondary" style="font-size:0.8rem">${val.w}×${val.h}</div>` : ""}`;
-        div.onclick = () => {
-          selectedPreset = key;
-          document.getElementById("custom-size").classList.toggle("hidden", key !== "custom");
-          renderPresetOptions();
-        };
-        container.appendChild(div);
-      }
-    }
-
-    async function previewImage() {
       const table = document.getElementById("export-preview-table");
-      const dataUrl = await exportAsImage(table, selectedPreset,
-        document.getElementById("custom-w").value,
-        document.getElementById("custom-h").value, true);
-      const container = document.getElementById("image-preview");
-      container.innerHTML = `<img src="${dataUrl}" alt="Preview">`;
-      container.classList.remove("hidden");
-      document.getElementById("download-img-btn").classList.remove("hidden");
+      exportAsImage(table);
     }
 
     async function downloadImage() {
       const table = document.getElementById("export-preview-table");
-      await exportAsImage(table, selectedPreset,
-        document.getElementById("custom-w").value,
-        document.getElementById("custom-h").value, false);
+      await exportAsImage(table);
     }
 
     function doExportExcel() {
@@ -678,7 +619,7 @@
       if (currentStep === 1) loadYears();
       if (currentStep === 2) loadClasses();
       if (currentStep === 3) { renderElectiveList(); renderUserSchedule(); }
-      if (currentStep === 4) { renderFinalSchedule(); renderExportPreview(); renderPresetOptions(); }
+      if (currentStep === 4) { renderExportPreview(); }
     });
 
     /* ── Start ───────────────────────────────────── */

@@ -1,50 +1,40 @@
 /* export.js - Export timetable as image, Excel, ICS */
 
-const IMAGE_PRESETS = {
-  desktop:   { w: 1920, h: 1080, label: "preset_desktop" },
-  macbook13: { w: 2560, h: 1600, label: "preset_macbook13" },
-  macbook16: { w: 3456, h: 2234, label: "preset_macbook16" },
-  ipad:      { w: 2360, h: 1640, label: "preset_ipad" },
-  iphone:    { w: 1179, h: 2556, label: "preset_iphone" },
-  custom:    { w: 0, h: 0, label: "preset_custom" }
-};
-
 /* ── Image Export ─────────────────────────────────── */
-async function exportAsImage(tableEl, preset, customW, customH, preview = false) {
-  const { w, h } = preset === "custom"
-    ? { w: parseInt(customW), h: parseInt(customH) }
-    : IMAGE_PRESETS[preset];
+async function exportAsImage(tableEl) {
+  // Auto-detect device resolution
+  const w = screen.width * (window.devicePixelRatio || 1);
+  const h = screen.height * (window.devicePixelRatio || 1);
+  const isPortrait = h > w;
 
-  // Use html2canvas
-  const canvas = await html2canvas(tableEl, {
-    scale: preview ? 0.5 : 2,
+  // Clone table into an offscreen container with controlled dimensions
+  const wrapper = document.createElement("div");
+  wrapper.style.cssText = `position:fixed;left:-9999px;top:0;padding:24px;box-sizing:border-box;background:${getComputedStyle(document.documentElement).getPropertyValue("--bg").trim()};`;
+  // Set wrapper to target aspect ratio, but keep font size the same (no scaling of text)
+  // For portrait (phone), make it tall and narrow; for landscape, wide
+  wrapper.style.width = isPortrait ? `${Math.min(w, 800)}px` : `${Math.max(w / 2, 900)}px`;
+  wrapper.style.fontSize = "14px";
+
+  const clone = tableEl.cloneNode(true);
+  clone.style.width = "100%";
+  clone.style.fontSize = "inherit";
+  wrapper.appendChild(clone);
+  document.body.appendChild(wrapper);
+
+  // Render with html2canvas at 2x for crisp output
+  const canvas = await html2canvas(wrapper, {
+    scale: 2,
     backgroundColor: getComputedStyle(document.documentElement).getPropertyValue("--bg").trim(),
-    width: tableEl.scrollWidth,
-    height: tableEl.scrollHeight
+    width: wrapper.offsetWidth,
+    height: wrapper.offsetHeight
   });
 
-  // Scale to target size
-  const outCanvas = document.createElement("canvas");
-  outCanvas.width = w;
-  outCanvas.height = h;
-  const ctx = outCanvas.getContext("2d");
-  ctx.fillStyle = getComputedStyle(document.documentElement).getPropertyValue("--bg").trim();
-  ctx.fillRect(0, 0, w, h);
-
-  // Center the table in the canvas
-  const scale = Math.min(w / canvas.width, h / canvas.height) * 0.9;
-  const dx = (w - canvas.width * scale) / 2;
-  const dy = (h - canvas.height * scale) / 2;
-  ctx.drawImage(canvas, dx, dy, canvas.width * scale, canvas.height * scale);
-
-  if (preview) {
-    return outCanvas.toDataURL("image/png", 0.5);
-  }
+  document.body.removeChild(wrapper);
 
   // Download
   const link = document.createElement("a");
-  link.download = `compass7_timetable_${w}x${h}.png`;
-  link.href = outCanvas.toDataURL("image/png");
+  link.download = `compass7_timetable_${canvas.width}x${canvas.height}.png`;
+  link.href = canvas.toDataURL("image/png");
   link.click();
 }
 
@@ -75,7 +65,7 @@ function exportAsExcel(scheduleData, selections, className) {
       const courseId = selections[slotKey];
       const slot = scheduleData[String(d)] && scheduleData[String(d)][String(p.num)];
       if (slot && courseId) {
-        const course = slot.courses.find(c => c.id === courseId);
+        const course = slot.courses.find(c => c.name_cn === courseId || c.id === courseId);
         row.push(course ? (currentLang === "zh" ? course.name_cn : course.name_en) : "");
       } else {
         row.push(p.lunch ? t("lunch") : "");
@@ -125,9 +115,9 @@ function exportAsICS(scheduleData, selections, startDate, endDate) {
     for (const [period, slot] of Object.entries(daySchedule)) {
       const slotKey = `${d}_${period}`;
       const courseId = selections[slotKey];
-      if (!courseId) continue;
+      if (!courseId || courseId === "__skip__") continue;
 
-      const course = slot.courses.find(c => c.id === courseId);
+      const course = slot.courses.find(c => c.name_cn === courseId || c.id === courseId);
       if (!course) continue;
 
       const times = PERIOD_TIMES[period];
@@ -146,9 +136,10 @@ function exportAsICS(scheduleData, selections, startDate, endDate) {
         `DTEND;TZID=Asia/Shanghai:${dateStr}T${times.end}`,
         `RRULE:FREQ=WEEKLY;BYDAY=${DAY_MAP[d]};UNTIL=${untilStr}`,
         `SUMMARY:${currentLang === "zh" ? course.name_cn : course.name_en}`,
+        course.room ? `LOCATION:${course.room}` : null,
         `UID:${slotKey}-${courseId}@compass7`,
         "END:VEVENT"
-      );
+      ).filter(Boolean);
     }
   }
 
