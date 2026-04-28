@@ -278,21 +278,29 @@ const TOTAL_COURSES = SCHEDULE_DATA.reduce((sum, s) => sum + s.courses.length, 0
 let passed = 0, failed = 0;
 const results = [];
 const screenshots = [];
+let currentTestName = '';
+const testScreenshots = []; // [{ test, status, shots: [{ name, file }] }]
+let currentTestShots = [];
 
 async function shot(page, name) {
   const file = path.join(SHOTS, `${name}.png`);
   await page.screenshot({ path: file, fullPage: true });
   screenshots.push(file);
+  currentTestShots.push({ name, file });
 }
 
 async function test(name, fn) {
+  currentTestName = name;
+  currentTestShots = [];
   try {
     await fn();
     passed++;
     results.push(`  \u2705 ${name}`);
+    testScreenshots.push({ test: name, status: 'passed', shots: [...currentTestShots] });
   } catch (e) {
     failed++;
     results.push(`  \u274c ${name}\n     ${e.message.split('\n')[0]}`);
+    testScreenshots.push({ test: name, status: 'failed', error: e.message.split('\n')[0], shots: [...currentTestShots] });
   }
 }
 
@@ -774,6 +782,12 @@ async function addCourseAtSlot(page, day, period, nameCn, nameEn, teacher, room)
   console.log(`\n${passed} passed, ${failed} failed, ${passed + failed} total`);
   console.log(`\nScreenshots (${screenshots.length}):`);
   screenshots.forEach(s => console.log(`  ${s}`));
+
+  // Write manifest for structured reporting
+  const manifest = path.join(SHOTS, 'manifest.json');
+  fs.writeFileSync(manifest, JSON.stringify(testScreenshots, null, 2));
+  console.log(`\nManifest: ${manifest}`);
+
   console.log('');
   process.exit(failed > 0 ? 1 : 0);
 })();
