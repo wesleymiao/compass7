@@ -1,0 +1,216 @@
+[
+  {
+    "test": "Cleanup previous [E2E] data",
+    "status": "passed",
+    "shots": []
+  },
+  {
+    "test": "Admin page loads",
+    "status": "passed",
+    "shots": [
+      {
+        "name": "01-admin-login",
+        "file": "/workspace/group/compass7/tests/screenshots/01-admin-login.png"
+      }
+    ]
+  },
+  {
+    "test": "Admin login",
+    "status": "passed",
+    "shots": [
+      {
+        "name": "02-admin-panel",
+        "file": "/workspace/group/compass7/tests/screenshots/02-admin-panel.png"
+      }
+    ]
+  },
+  {
+    "test": "Create test year",
+    "status": "passed",
+    "shots": [
+      {
+        "name": "03-year-created",
+        "file": "/workspace/group/compass7/tests/screenshots/03-year-created.png"
+      }
+    ]
+  },
+  {
+    "test": "Create Class-A",
+    "status": "passed",
+    "shots": [
+      {
+        "name": "04-classA-created",
+        "file": "/workspace/group/compass7/tests/screenshots/04-classA-created.png"
+      }
+    ]
+  },
+  {
+    "test": "Create Class-B",
+    "status": "passed",
+    "shots": []
+  },
+  {
+    "test": "Populate Class-A with full IB timetable",
+    "status": "passed",
+    "shots": [
+      {
+        "name": "05-schedule-full",
+        "file": "/workspace/group/compass7/tests/screenshots/05-schedule-full.png"
+      }
+    ]
+  },
+  {
+    "test": "Schedule persists after reload",
+    "status": "passed",
+    "shots": [
+      {
+        "name": "06-persisted",
+        "file": "/workspace/group/compass7/tests/screenshots/06-persisted.png"
+      }
+    ]
+  },
+  {
+    "test": "Teacher and room info persisted",
+    "status": "passed",
+    "shots": [
+      {
+        "name": "07-teacher-room",
+        "file": "/workspace/group/compass7/tests/screenshots/07-teacher-room.png"
+      }
+    ]
+  },
+  {
+    "test": "Edit course name",
+    "status": "passed",
+    "shots": [
+      {
+        "name": "08-edited",
+        "file": "/workspace/group/compass7/tests/screenshots/08-edited.png"
+      }
+    ]
+  },
+  {
+    "test": "Delete a course",
+    "status": "passed",
+    "shots": [
+      {
+        "name": "09-deleted",
+        "file": "/workspace/group/compass7/tests/screenshots/09-deleted.png"
+      }
+    ]
+  },
+  {
+    "test": "Delete persists after reload",
+    "status": "passed",
+    "shots": [
+      {
+        "name": "10-delete-persisted",
+        "file": "/workspace/group/compass7/tests/screenshots/10-delete-persisted.png"
+      }
+    ]
+  },
+  {
+    "test": "P6-P10 labels displayed",
+    "status": "passed",
+    "shots": [
+      {
+        "name": "11-period-labels",
+        "file": "/workspace/group/compass7/tests/screenshots/11-period-labels.png"
+      }
+    ]
+  },
+  {
+    "test": "Multi-course slots show multiple tags",
+    "status": "passed",
+    "shots": [
+      {
+        "name": "12-multi-course",
+        "file": "/workspace/group/compass7/tests/screenshots/12-multi-course.png"
+      }
+    ]
+  },
+  {
+    "test": "Class-B is empty (data isolation)",
+    "status": "passed",
+    "shots": [
+      {
+        "name": "13-classB-empty",
+        "file": "/workspace/group/compass7/tests/screenshots/13-classB-empty.png"
+      }
+    ]
+  },
+  {
+    "test": "User sees test year and both classes",
+    "status": "passed",
+    "shots": [
+      {
+        "name": "14-user-classes",
+        "file": "/workspace/group/compass7/tests/screenshots/14-user-classes.png"
+      }
+    ]
+  },
+  {
+    "test": "User views elective selection and schedule preview",
+    "status": "passed",
+    "shots": [
+      {
+        "name": "15-user-schedule",
+        "file": "/workspace/group/compass7/tests/screenshots/15-user-schedule.png"
+      },
+      {
+        "name": "16-user-dropdowns",
+        "file": "/workspace/group/compass7/tests/screenshots/16-user-dropdowns.png"
+      }
+    ]
+  },
+  {
+    "test": "User register / login",
+    "status": "passed",
+    "shots": [
+      {
+        "name": "17-user-auth",
+        "file": "/workspace/group/compass7/tests/screenshots/17-user-auth.png"
+      }
+    ]
+  },
+  {
+    "test": "Mobile viewport",
+    "status": "passed",
+    "shots": [
+      {
+        "name": "18-mobile",
+        "file": "/workspace/group/compass7/tests/screenshots/18-mobile.png"
+      }
+    ]
+  },
+  {
+    "test": "Dark mode",
+    "status": "passed",
+    "shots": [
+      {
+        "name": "19-dark",
+        "file": "/workspace/group/compass7/tests/screenshots/19-dark.png"
+      }
+    ]
+  },
+  {
+    "test": "Language toggle",
+    "status": "passed",
+    "shots": [
+      {
+        "name": "20-lang",
+        "file": "/workspace/group/compass7/tests/screenshots/20-lang.png"
+      }
+    ]
+  },
+  {
+    "test": "JSON export contains test data with teacher/room",
+    "status": "passed",
+    "shots": [
+      {
+        "name": "21-export",
+        "file": "/workspace/group/compass7/tests/screenshots/21-export.png"
+      }
+    ]
+  }
+]
