@@ -170,18 +170,7 @@
         document.getElementById("login-btn").classList.remove("hidden");
       }
 
-      // Load guest selections from localStorage
-      if (!currentUser) {
-        const saved = localStorage.getItem("compass7_guest");
-        if (saved) {
-          try {
-            const data = JSON.parse(saved);
-            selectedYear = data.year;
-            selectedClass = data.cls;
-            userSelections = data.selections || {};
-          } catch {}
-        }
-      }
+      // Guest users start fresh every visit (no localStorage persistence)
 
       loadYears();
     }
@@ -508,13 +497,8 @@
     function saveSelections() {
       if (currentUser) {
         saveSelectionsToServer();
-      } else {
-        localStorage.setItem("compass7_guest", JSON.stringify({
-          year: selectedYear,
-          cls: selectedClass,
-          selections: userSelections
-        }));
       }
+      // Guest selections are not persisted
     }
 
     async function saveSelectionsToServer() {
