@@ -561,12 +561,13 @@ async function addCourseAtSlot(page, day, period, nameCn, nameEn, teacher, room)
   // SCHEDULE FEATURES
   // ═══════════════════════════════════════════════
 
-  await test('P6-P10 labels displayed', async () => {
+  await test('Unified period labels (no P6-P10)', async () => {
     const page = await browser.newPage();
     await adminToSchedule(page, TEST_CLASS_A);
     const text = await page.locator('#admin-schedule-table').textContent();
-    for (const l of ['P6','P7','P8','P9','P10']) assert(text.includes(l), `${l} missing`);
-    console.log('    All P6-P10 labels OK');
+    // After unification, no P6-P10 labels — all use "节次 X" / "Period X"
+    for (const l of ['P6','P7','P8','P9','P10']) assert(!text.includes(l), `${l} should not appear`);
+    console.log('    Unified period labels OK');
     await shot(page, '11-period-labels');
     await page.close();
   });
