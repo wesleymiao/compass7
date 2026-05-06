@@ -1,40 +1,128 @@
 /* export.js - Export timetable as image, Excel, ICS */
 
 /* ── Image Export ─────────────────────────────────── */
-async function exportAsImage(tableEl) {
-  // Auto-detect device resolution
-  const w = screen.width * (window.devicePixelRatio || 1);
-  const h = screen.height * (window.devicePixelRatio || 1);
-  const isPortrait = h > w;
+async function exportAsImage(tableEl, opts = {}) {
+  const targetWidth = opts.width || Math.round(screen.width * (window.devicePixelRatio || 1));
+  const username = opts.username || null;
 
-  // Clone table into an offscreen container with controlled dimensions
+  // Build a styled offscreen container
+  const bg = getComputedStyle(document.documentElement).getPropertyValue("--bg").trim();
+  const text = getComputedStyle(document.documentElement).getPropertyValue("--text").trim();
+  const textSec = getComputedStyle(document.documentElement).getPropertyValue("--text-secondary").trim();
+  const primary = getComputedStyle(document.documentElement).getPropertyValue("--primary").trim();
+
   const wrapper = document.createElement("div");
-  wrapper.style.cssText = `position:fixed;left:-9999px;top:0;padding:24px;box-sizing:border-box;background:${getComputedStyle(document.documentElement).getPropertyValue("--bg").trim()};`;
-  // Set wrapper to target aspect ratio, but keep font size the same (no scaling of text)
-  // For portrait (phone), make it tall and narrow; for landscape, wide
-  wrapper.style.width = isPortrait ? `${Math.min(w, 800)}px` : `${Math.max(w / 2, 900)}px`;
-  wrapper.style.fontSize = "14px";
+  wrapper.style.cssText = `position:fixed;left:-9999px;top:0;box-sizing:border-box;background:${bg};color:${text};font-family:-apple-system,BlinkMacSystemFont,'SF Pro Display','Segoe UI',Roboto,sans-serif;`;
+  wrapper.style.width = targetWidth + "px";
 
+  // Determine font size scaling — ensure readability even on small widths
+  // Min font size 12px, scale up proportionally for larger resolutions
+  const baseFontSize = Math.max(12, Math.round(targetWidth / 80));
+  wrapper.style.fontSize = baseFontSize + "px";
+  const pad = Math.round(targetWidth * 0.03);
+  wrapper.style.padding = pad + "px";
+
+  // ── Header section ──
+  const header = document.createElement("div");
+  header.style.cssText = `display:flex;justify-content:space-between;align-items:flex-end;margin-bottom:${Math.round(pad * 0.8)}px;padding-bottom:${Math.round(pad * 0.5)}px;border-bottom:2px solid ${primary};`;
+
+  const titleDiv = document.createElement("div");
+  const title = document.createElement("div");
+  title.style.cssText = `font-size:${baseFontSize * 1.6}px;font-weight:700;color:${primary};letter-spacing:-0.02em;`;
+  title.textContent = "Compass7";
+  titleDiv.appendChild(title);
+
+  // Class name subtitle
+  if (typeof selectedClass !== "undefined" && selectedClass && selectedClass.name) {
+    const sub = document.createElement("div");
+    sub.style.cssText = `font-size:${baseFontSize * 0.9}px;color:${textSec};margin-top:4px;`;
+    sub.textContent = selectedClass.name;
+    titleDiv.appendChild(sub);
+  }
+
+  header.appendChild(titleDiv);
+
+  // Right side: username + date
+  const rightInfo = document.createElement("div");
+  rightInfo.style.cssText = `text-align:right;font-size:${baseFontSize * 0.85}px;color:${textSec};`;
+  if (username) {
+    const userLine = document.createElement("div");
+    userLine.style.fontWeight = "600";
+    userLine.style.color = text;
+    userLine.textContent = username;
+    rightInfo.appendChild(userLine);
+  }
+  const dateLine = document.createElement("div");
+  dateLine.textContent = new Date().toLocaleDateString("zh-CN", { year: "numeric", month: "long", day: "numeric" });
+  rightInfo.appendChild(dateLine);
+  header.appendChild(rightInfo);
+
+  wrapper.appendChild(header);
+
+  // ── Table ──
   const clone = tableEl.cloneNode(true);
   clone.style.width = "100%";
   clone.style.fontSize = "inherit";
+  clone.style.borderCollapse = "collapse";
+  // Style all cells for export clarity
+  clone.querySelectorAll("th, td").forEach(cell => {
+    cell.style.padding = Math.round(baseFontSize * 0.5) + "px " + Math.round(baseFontSize * 0.6) + "px";
+    cell.style.border = "1px solid " + (getComputedStyle(document.documentElement).getPropertyValue("--border").trim() || "#d2d2d7");
+    cell.style.fontSize = baseFontSize + "px";
+    cell.style.lineHeight = "1.4";
+  });
+  clone.querySelectorAll("th").forEach(th => {
+    th.style.fontWeight = "600";
+    th.style.fontSize = (baseFontSize * 0.95) + "px";
+  });
   wrapper.appendChild(clone);
+
+  // ── Footer ──
+  const footer = document.createElement("div");
+  footer.style.cssText = `display:flex;justify-content:space-between;align-items:center;margin-top:${Math.round(pad * 0.5)}px;padding-top:${Math.round(pad * 0.4)}px;border-top:1px solid ${textSec}33;font-size:${baseFontSize * 0.7}px;color:${textSec};`;
+  const footLeft = document.createElement("div");
+  footLeft.textContent = "Generated by Compass7";
+  footer.appendChild(footLeft);
+  const footRight = document.createElement("div");
+  footRight.textContent = `${targetWidth}px`;
+  footer.appendChild(footRight);
+  wrapper.appendChild(footer);
+
   document.body.appendChild(wrapper);
 
-  // Render with html2canvas at 2x for crisp output
+  // Calculate render scale for crisp output
+  // Use scale=2 for standard, but ensure minimum pixel density
+  const renderScale = Math.max(2, Math.ceil(2048 / wrapper.offsetWidth));
+
   const canvas = await html2canvas(wrapper, {
-    scale: 2,
-    backgroundColor: getComputedStyle(document.documentElement).getPropertyValue("--bg").trim(),
+    scale: renderScale,
+    backgroundColor: bg,
     width: wrapper.offsetWidth,
-    height: wrapper.offsetHeight
+    height: opts.height || wrapper.offsetHeight,
+    useCORS: true,
+    logging: false
   });
 
   document.body.removeChild(wrapper);
 
-  // Download
+  // If a specific height was requested, resize the canvas
+  let finalCanvas = canvas;
+  if (opts.height && canvas.height !== opts.height * renderScale) {
+    finalCanvas = document.createElement("canvas");
+    finalCanvas.width = canvas.width;
+    finalCanvas.height = opts.height * renderScale;
+    const ctx = finalCanvas.getContext("2d");
+    ctx.fillStyle = bg;
+    ctx.fillRect(0, 0, finalCanvas.width, finalCanvas.height);
+    ctx.drawImage(canvas, 0, 0);
+  }
+
+  // Download as high-quality PNG
   const link = document.createElement("a");
-  link.download = `compass7_timetable_${canvas.width}x${canvas.height}.png`;
-  link.href = canvas.toDataURL("image/png");
+  const actualW = Math.round(finalCanvas.width);
+  const actualH = Math.round(finalCanvas.height);
+  link.download = `compass7_timetable_${actualW}x${actualH}.png`;
+  link.href = finalCanvas.toDataURL("image/png");
   link.click();
 }
 

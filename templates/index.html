@@ -102,6 +102,23 @@
         <div style="display:flex;gap:12px" class="mt-16">
           <div class="form-group" style="flex:1"><label data-i18n="semester_start">学期开始日期</label><input type="date" id="ics-start"></div>
           <div class="form-group" style="flex:1"><label data-i18n="semester_end">学期结束日期</label><input type="date" id="ics-end"></div>
+
+      <!-- Image export settings -->
+      <div id="image-export-panel" class="card hidden mt-16">
+        <h3>📷 导出图片设置</h3>
+        <div style="display:flex;gap:12px;flex-wrap:wrap" class="mt-16">
+          <div class="form-group" style="flex:1;min-width:120px">
+            <label>宽度 (px)</label>
+            <input type="number" id="export-width" min="400" max="8000" step="100">
+          </div>
+          <div class="form-group" style="flex:1;min-width:120px">
+            <label>高度 (px)</label>
+            <input type="number" id="export-height" min="300" max="8000" step="100" placeholder="自动">
+          </div>
+        </div>
+        <p class="text-secondary" style="font-size:0.82rem;margin-bottom:12px" id="export-device-info"></p>
+        <button class="btn btn-primary" onclick="doExportImage()">生成并下载图片</button>
+      </div>
         </div>
         <button class="btn btn-primary mt-8" onclick="doExportICS()" data-i18n="generate_ics">生成日历文件</button>
       </div>
@@ -575,13 +592,27 @@
     }
 
     function showExportImage() {
-      const table = document.getElementById("export-preview-table");
-      exportAsImage(table);
+      document.getElementById("ics-export-panel").classList.add("hidden");
+      const panel = document.getElementById("image-export-panel");
+      panel.classList.toggle("hidden");
+      if (!panel.classList.contains("hidden")) {
+        const dpr = window.devicePixelRatio || 1;
+        const w = Math.round(screen.width * dpr);
+        const h = Math.round(screen.height * dpr);
+        document.getElementById("export-width").value = w;
+        document.getElementById("export-height").value = "";
+        document.getElementById("export-height").placeholder = "自动";
+        document.getElementById("export-device-info").textContent =
+          `设备分辨率: ${screen.width}×${screen.height} @ ${dpr}x = ${w}×${h}px`;
+      }
     }
 
-    async function downloadImage() {
+    function doExportImage() {
       const table = document.getElementById("export-preview-table");
-      await exportAsImage(table);
+      const w = parseInt(document.getElementById("export-width").value) || 1920;
+      const h = document.getElementById("export-height").value ? parseInt(document.getElementById("export-height").value) : null;
+      const username = currentUser ? currentUser.username : null;
+      exportAsImage(table, { width: w, height: h, username: username });
     }
 
     function doExportExcel() {

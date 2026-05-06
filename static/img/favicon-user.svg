@@ -1,14 +1,17 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64">
   <defs>
     <linearGradient id="bg" x1="0%" y1="0%" x2="100%" y2="100%">
-      <stop offset="0%" style="stop-color:#0071e3"/>
+      <stop offset="0%" style="stop-color:#0055ff"/>
       <stop offset="100%" style="stop-color:#00c6fb"/>
     </linearGradient>
+    <filter id="shadow">
+      <feDropShadow dx="0" dy="1" stdDeviation="2" flood-opacity="0.3"/>
+    </filter>
   </defs>
   <rect width="64" height="64" rx="14" fill="url(#bg)"/>
-  <!-- Compass needle / "7" shape -->
-  <text x="32" y="46" text-anchor="middle" font-family="-apple-system,SF Pro Display,Helvetica" font-size="38" font-weight="700" fill="white">7</text>
-  <!-- Small compass dot -->
-  <circle cx="18" cy="18" r="4" fill="rgba(255,255,255,0.5)"/>
-  <circle cx="18" cy="18" r="2" fill="white"/>
+  <!-- Bold "7" -->
+  <text x="32" y="49" text-anchor="middle" font-family="Arial Black,Impact,Helvetica" font-size="44" font-weight="900" fill="white" filter="url(#shadow)">7</text>
+  <!-- Compass needle accent -->
+  <polygon points="12,8 16,20 8,20" fill="white" opacity="0.9"/>
+  <polygon points="12,8 16,20 8,20" fill="white" opacity="0.4" transform="rotate(180,12,14)"/>
 </svg>

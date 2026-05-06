@@ -780,7 +780,6 @@ a:hover { opacity: 0.8; }
 }
 .split-left {
   flex: 0 0 360px;
-  max-height: calc(100vh - 160px);
   overflow-y: auto;
 }
 .split-right {
@@ -794,8 +793,7 @@ a:hover { opacity: 0.8; }
   border-radius: var(--radius);
   padding: 16px;
   box-shadow: var(--shadow);
-  max-height: calc(100vh - 160px);
-  overflow-y: auto;
+  overflow: visible;
 }
 .split-right .schedule-wrapper {
   overflow-x: auto;
