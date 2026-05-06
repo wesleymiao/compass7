@@ -96,13 +96,6 @@
         </div>
       </div>
 
-      <!-- ICS export settings -->
-      <div id="ics-export-panel" class="card hidden mt-16">
-        <h3 data-i18n="export_ics">导出为日历</h3>
-        <div style="display:flex;gap:12px" class="mt-16">
-          <div class="form-group" style="flex:1"><label data-i18n="semester_start">学期开始日期</label><input type="date" id="ics-start"></div>
-          <div class="form-group" style="flex:1"><label data-i18n="semester_end">学期结束日期</label><input type="date" id="ics-end"></div>
-
       <!-- Image export settings -->
       <div id="image-export-panel" class="card hidden mt-16">
         <h3>📷 导出图片设置</h3>
@@ -119,6 +112,13 @@
         <p class="text-secondary" style="font-size:0.82rem;margin-bottom:12px" id="export-device-info"></p>
         <button class="btn btn-primary" onclick="doExportImage()">生成并下载图片</button>
       </div>
+
+      <!-- ICS export settings -->
+      <div id="ics-export-panel" class="card hidden mt-16">
+        <h3 data-i18n="export_ics">导出为日历</h3>
+        <div style="display:flex;gap:12px" class="mt-16">
+          <div class="form-group" style="flex:1"><label data-i18n="semester_start">学期开始日期</label><input type="date" id="ics-start"></div>
+          <div class="form-group" style="flex:1"><label data-i18n="semester_end">学期结束日期</label><input type="date" id="ics-end"></div>
         </div>
         <button class="btn btn-primary mt-8" onclick="doExportICS()" data-i18n="generate_ics">生成日历文件</button>
       </div>
