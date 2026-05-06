@@ -77,6 +77,16 @@
   padding: 0;
 }
 
+/* ── Smooth scrollbars ──────────────────────────── */
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: rgba(0,0,0,0.15); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: rgba(0,0,0,0.25); }
+[data-theme="dark"] ::-webkit-scrollbar-thumb { background: rgba(255,255,255,0.15); }
+[data-theme="dark"] ::-webkit-scrollbar-thumb:hover { background: rgba(255,255,255,0.25); }
+
+::selection { background: rgba(0,113,227,0.2); }
+
 body {
   font-family: var(--font);
   background: var(--bg);
@@ -88,6 +98,8 @@ body {
     radial-gradient(ellipse at 80% 20%, rgba(52,199,89,0.05) 0%, transparent 50%),
     radial-gradient(ellipse at 50% 80%, rgba(255,149,0,0.04) 0%, transparent 50%);
   background-attachment: fixed;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
 }
 
 [data-theme="dark"] body {
@@ -142,8 +154,24 @@ header .container {
 }
 
 main {
-  padding: 24px 0;
+  padding: 24px 0 48px;
   min-height: calc(100vh - 120px);
+}
+
+h2 {
+  font-size: 1.5rem;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  background: linear-gradient(135deg, var(--text) 0%, var(--text-secondary) 100%);
+  -webkit-background-clip: text;
+  -webkit-text-fill-color: transparent;
+  background-clip: text;
+}
+
+h3 {
+  font-size: 1.1rem;
+  font-weight: 600;
+  letter-spacing: -0.01em;
 }
 
 /* ── Buttons ─────────────────────────────────────── */
@@ -188,10 +216,15 @@ main {
 }
 
 .btn-danger {
-  background: var(--danger);
+  background: linear-gradient(135deg, var(--danger), #e0321e);
   color: #fff;
+  box-shadow: 0 2px 8px rgba(255,59,48,0.2);
 }
-.btn-danger:hover { opacity: 0.9; }
+.btn-danger:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 20px rgba(255,59,48,0.3);
+}
+.btn-danger:active { transform: translateY(0); }
 
 .btn-sm {
   padding: 4px 10px;
@@ -255,14 +288,16 @@ input[type="number"],
 input[type="date"],
 select {
   width: 100%;
-  padding: 10px 12px;
+  padding: 10px 14px;
   border: 1px solid var(--border);
   border-radius: var(--radius-sm);
   font-size: 0.95rem;
   font-family: var(--font);
-  background: var(--bg);
+  background: var(--glass-bg);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
   color: var(--text);
-  transition: border var(--transition);
+  transition: all var(--transition);
 }
 
 input:focus, select:focus {
@@ -280,7 +315,10 @@ input:focus, select:focus {
 .schedule-grid {
   width: 100%;
   min-width: 700px;
-  border-collapse: collapse;
+  border-collapse: separate;
+  border-spacing: 0;
+  border-radius: var(--radius);
+  overflow: hidden;
 }
 
 .schedule-grid th,
@@ -388,7 +426,8 @@ input:focus, select:focus {
 }
 
 .slot-cell .course-tag.selected {
-  background: var(--success);
+  background: linear-gradient(135deg, var(--success), #2db84d);
+  box-shadow: 0 1px 6px rgba(52,199,89,0.3);
 }
 
 .slot-cell .add-course-btn {
@@ -432,7 +471,10 @@ input:focus, select:focus {
 .auth-tabs {
   display: flex;
   margin-bottom: 20px;
-  border-bottom: 2px solid var(--border);
+  background: var(--bg-secondary);
+  border-radius: var(--radius-sm);
+  padding: 3px;
+  gap: 3px;
 }
 
 .auth-tab {
@@ -441,14 +483,22 @@ input:focus, select:focus {
   text-align: center;
   cursor: pointer;
   font-weight: 500;
-  border-bottom: 2px solid transparent;
-  margin-bottom: -2px;
+  border-radius: calc(var(--radius-sm) - 2px);
   transition: all var(--transition);
+  color: var(--text-secondary);
 }
 
 .auth-tab.active {
-  border-bottom-color: var(--primary);
+  background: var(--glass-bg);
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
   color: var(--primary);
+  box-shadow: 0 1px 4px rgba(0,0,0,0.08);
+  font-weight: 600;
+}
+
+.auth-tab:hover:not(.active) {
+  color: var(--text);
 }
 
 /* ── Modal ───────────────────────────────────────── */
@@ -718,6 +768,9 @@ input:focus, select:focus {
 .flex-between { display: flex; justify-content: space-between; align-items: center; }
 .flex-wrap { flex-wrap: wrap; }
 .inline-flex { display: inline-flex; align-items: center; gap: 6px; }
+
+a { color: var(--primary); transition: opacity var(--transition); }
+a:hover { opacity: 0.8; }
 
 /* ── Split Pane (elective selection + live preview) ── */
 .split-pane {

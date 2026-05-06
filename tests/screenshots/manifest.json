@@ -141,7 +141,8 @@
   },
   {
     "test": "User sees test year and both classes",
-    "status": "passed",
+    "status": "failed",
+    "error": "Both classes should be visible",
     "shots": [
       {
         "name": "14-user-classes",
@@ -151,27 +152,14 @@
   },
   {
     "test": "User views elective selection and schedule preview",
-    "status": "passed",
-    "shots": [
-      {
-        "name": "15-user-schedule",
-        "file": "/workspace/group/compass7/tests/screenshots/15-user-schedule.png"
-      },
-      {
-        "name": "16-user-dropdowns",
-        "file": "/workspace/group/compass7/tests/screenshots/16-user-dropdowns.png"
-      }
-    ]
+    "status": "failed",
+    "error": "Should show elective course options",
+    "shots": []
   },
   {
     "test": "User register / login",
     "status": "passed",
-    "shots": [
-      {
-        "name": "17-user-auth",
-        "file": "/workspace/group/compass7/tests/screenshots/17-user-auth.png"
-      }
-    ]
+    "shots": []
   },
   {
     "test": "Mobile viewport",
@@ -195,22 +183,14 @@
   },
   {
     "test": "Language toggle",
-    "status": "passed",
-    "shots": [
-      {
-        "name": "20-lang",
-        "file": "/workspace/group/compass7/tests/screenshots/20-lang.png"
-      }
-    ]
+    "status": "failed",
+    "error": "page.goto: Timeout 30000ms exceeded.",
+    "shots": []
   },
   {
     "test": "JSON export contains test data with teacher/room",
-    "status": "passed",
-    "shots": [
-      {
-        "name": "21-export",
-        "file": "/workspace/group/compass7/tests/screenshots/21-export.png"
-      }
-    ]
+    "status": "failed",
+    "error": "page.goto: Timeout 30000ms exceeded.",
+    "shots": []
   }
 ]
