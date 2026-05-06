@@ -770,6 +770,116 @@ async function addCourseAtSlot(page, day, period, nameCn, nameEn, teacher, room)
   });
 
   // ═══════════════════════════════════════════════
+  // FAVICON TESTS
+  // ═══════════════════════════════════════════════
+
+  await test('User page has favicon', async () => {
+    const page = await browser.newPage();
+    await page.goto(BASE);
+    await page.waitForTimeout(1000);
+    const favicon = await page.$('link[rel="icon"]');
+    assert(favicon, 'No favicon link found on user page');
+    const href = await favicon.getAttribute('href');
+    assert(href && href.includes('favicon-user'), `Expected user favicon, got: ${href}`);
+    await shot(page, '22-user-favicon');
+    await page.close();
+  });
+
+  await test('Admin page has favicon', async () => {
+    const page = await browser.newPage();
+    await page.goto(`${BASE}/admin`);
+    await page.waitForTimeout(1000);
+    const favicon = await page.$('link[rel="icon"]');
+    assert(favicon, 'No favicon link found on admin page');
+    const href = await favicon.getAttribute('href');
+    assert(href && href.includes('favicon-admin'), `Expected admin favicon, got: ${href}`);
+    await shot(page, '23-admin-favicon');
+    await page.close();
+  });
+
+  // ═══════════════════════════════════════════════
+  // IMAGE EXPORT PANEL
+  // ═══════════════════════════════════════════════
+
+  await test('Image export panel opens with resolution inputs', async () => {
+    const page = await browser.newPage();
+    await page.goto(BASE);
+    await page.waitForTimeout(2000);
+
+    // Navigate to step 4 via clicking year -> class -> step4
+    const yearBtn = await page.$('#year-list .btn');
+    if (yearBtn) {
+      await yearBtn.click();
+      await page.waitForTimeout(1000);
+      const classBtn = await page.$('#class-list .btn');
+      if (classBtn) {
+        await classBtn.click();
+        await page.waitForTimeout(1500);
+        await page.evaluate(() => goToStep(4));
+        await page.waitForTimeout(1000);
+      }
+    }
+
+    // Click export image option
+    const exportOption = await page.$('.export-option');
+    assert(exportOption, 'Export option button not found');
+    await exportOption.click();
+    await page.waitForTimeout(500);
+
+    // Check panel is visible
+    const panel = await page.$('#image-export-panel');
+    assert(panel, 'Image export panel not found');
+    const isVisible = await panel.evaluate(el => !el.classList.contains('hidden'));
+    assert(isVisible, 'Image export panel is hidden after click');
+
+    // Check resolution input has a value (auto-detected)
+    const widthVal = await page.$eval('#export-width', el => el.value);
+    assert(widthVal && parseInt(widthVal) > 0, `Export width should be auto-detected, got: ${widthVal}`);
+
+    // Check device info text
+    const deviceInfo = await page.$eval('#export-device-info', el => el.textContent);
+    assert(deviceInfo && deviceInfo.length > 0, 'Device info text not shown');
+
+    await shot(page, '24-image-export-panel');
+    await page.close();
+  });
+
+  // ═══════════════════════════════════════════════
+  // PREVIEW PANEL - NO SCROLL
+  // ═══════════════════════════════════════════════
+
+  await test('Schedule preview shows full table without scroll', async () => {
+    const page = await browser.newPage();
+    await page.goto(BASE);
+    await page.waitForTimeout(2000);
+
+    const yearBtn = await page.$('#year-list .btn');
+    if (yearBtn) {
+      await yearBtn.click();
+      await page.waitForTimeout(1000);
+      const classBtn = await page.$('#class-list .btn');
+      if (classBtn) {
+        await classBtn.click();
+        await page.waitForTimeout(1500);
+      }
+    }
+
+    // Check preview panel doesn't have overflow scroll
+    const previewPanel = await page.$('#preview-panel');
+    if (previewPanel) {
+      const overflow = await previewPanel.evaluate(el => {
+        const style = window.getComputedStyle(el);
+        return { overflowY: style.overflowY, maxHeight: style.maxHeight };
+      });
+      assert(overflow.overflowY !== 'scroll', `Preview panel should not have overflow-y:scroll, got: ${overflow.overflowY}`);
+      assert(overflow.maxHeight === 'none' || overflow.maxHeight === '', `Preview panel should not have max-height, got: ${overflow.maxHeight}`);
+    }
+
+    await shot(page, '25-preview-no-scroll');
+    await page.close();
+  });
+
+  // ═══════════════════════════════════════════════
   // NO CLEANUP — data stays for manual inspection
   // ═══════════════════════════════════════════════
   console.log('\n  \u2139\ufe0f  Test data left on site for inspection (cleaned up on next run)');
