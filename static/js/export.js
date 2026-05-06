@@ -71,6 +71,17 @@ async function exportAsImage(tableEl, opts = {}) {
     cell.style.fontSize = baseFontSize + "px";
     cell.style.lineHeight = "1.4";
   });
+  // Fix period-time spans (e.g. "8:00-8:40") — make them proportional, not tiny
+  clone.querySelectorAll(".period-time").forEach(span => {
+    span.style.fontSize = (baseFontSize * 0.85) + "px";
+    span.style.display = "block";
+    span.style.marginTop = "2px";
+  });
+  // Fix course-tag elements
+  clone.querySelectorAll(".course-tag").forEach(tag => {
+    tag.style.fontSize = (baseFontSize * 0.9) + "px";
+    tag.style.padding = Math.round(baseFontSize * 0.2) + "px " + Math.round(baseFontSize * 0.5) + "px";
+  });
   clone.querySelectorAll("th").forEach(th => {
     th.style.fontWeight = "600";
     th.style.fontSize = (baseFontSize * 0.95) + "px";

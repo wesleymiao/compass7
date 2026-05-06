@@ -141,8 +141,7 @@
   },
   {
     "test": "User sees test year and both classes",
-    "status": "failed",
-    "error": "Both classes should be visible",
+    "status": "passed",
     "shots": [
       {
         "name": "14-user-classes",
@@ -152,14 +151,27 @@
   },
   {
     "test": "User views elective selection and schedule preview",
-    "status": "failed",
-    "error": "Should show elective course options",
-    "shots": []
+    "status": "passed",
+    "shots": [
+      {
+        "name": "15-user-schedule",
+        "file": "/workspace/group/compass7/tests/screenshots/15-user-schedule.png"
+      },
+      {
+        "name": "16-user-dropdowns",
+        "file": "/workspace/group/compass7/tests/screenshots/16-user-dropdowns.png"
+      }
+    ]
   },
   {
     "test": "User register / login",
     "status": "passed",
-    "shots": []
+    "shots": [
+      {
+        "name": "17-user-auth",
+        "file": "/workspace/group/compass7/tests/screenshots/17-user-auth.png"
+      }
+    ]
   },
   {
     "test": "Mobile viewport",
@@ -183,14 +195,62 @@
   },
   {
     "test": "Language toggle",
-    "status": "failed",
-    "error": "page.goto: Timeout 30000ms exceeded.",
-    "shots": []
+    "status": "passed",
+    "shots": [
+      {
+        "name": "20-lang",
+        "file": "/workspace/group/compass7/tests/screenshots/20-lang.png"
+      }
+    ]
   },
   {
     "test": "JSON export contains test data with teacher/room",
-    "status": "failed",
-    "error": "page.goto: Timeout 30000ms exceeded.",
-    "shots": []
+    "status": "passed",
+    "shots": [
+      {
+        "name": "21-export",
+        "file": "/workspace/group/compass7/tests/screenshots/21-export.png"
+      }
+    ]
+  },
+  {
+    "test": "User page has favicon",
+    "status": "passed",
+    "shots": [
+      {
+        "name": "22-user-favicon",
+        "file": "/workspace/group/compass7/tests/screenshots/22-user-favicon.png"
+      }
+    ]
+  },
+  {
+    "test": "Admin page has favicon",
+    "status": "passed",
+    "shots": [
+      {
+        "name": "23-admin-favicon",
+        "file": "/workspace/group/compass7/tests/screenshots/23-admin-favicon.png"
+      }
+    ]
+  },
+  {
+    "test": "Image export panel opens with resolution inputs",
+    "status": "passed",
+    "shots": [
+      {
+        "name": "24-image-export-panel",
+        "file": "/workspace/group/compass7/tests/screenshots/24-image-export-panel.png"
+      }
+    ]
+  },
+  {
+    "test": "Schedule preview shows full table without scroll",
+    "status": "passed",
+    "shots": [
+      {
+        "name": "25-preview-no-scroll",
+        "file": "/workspace/group/compass7/tests/screenshots/25-preview-no-scroll.png"
+      }
+    ]
   }
 ]
