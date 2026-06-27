@@ -48,8 +48,19 @@ def login_required(f):
 # ── Pages ──────────────────────────────────────────────
 
 @app.route("/")
-def index_page():
-    return send_from_directory("templates", "index.html")
+def root_redirect():
+    from flask import redirect
+    return redirect("/home")
+
+
+@app.route("/home")
+def home_page():
+    return send_from_directory("templates", "home.html")
+
+
+@app.route("/timetable")
+def timetable_page():
+    return send_from_directory("templates", "timetable.html")
 
 
 @app.route("/admin")
