@@ -319,7 +319,50 @@ def get_posts():
     data = _read_blob("posts.json", {"posts": []})
     # Sort by created_at descending (newest first)
     data["posts"].sort(key=lambda p: p.get("created_at", ""), reverse=True)
+    # Ensure image URLs have valid SAS tokens
+    for post in data["posts"]:
+        post["images"] = [_ensure_sas_url(url) for url in (post.get("images") or [])]
     return data
+
+
+def _ensure_sas_url(url: str) -> str:
+    """Ensure a blob URL has a valid SAS token for access."""
+    if STORAGE_MODE == "local":
+        return url
+    if not url or "blob.core.windows.net" not in url:
+        return url
+    # If URL already has a SAS token that's not expired, return as-is
+    if "?" in url and "sig=" in url:
+        # Check if SAS is still valid (simplified check - just regenerate if it looks old)
+        # For simplicity, always regenerate SAS for now
+        url = url.split("?")[0]
+
+    # Generate new SAS token
+    from datetime import timedelta
+    from azure.storage.blob import generate_blob_sas, BlobSasPermissions
+
+    try:
+        # Parse blob path from URL
+        # URL format: https://account.blob.core.windows.net/container/path
+        parts = url.replace("https://", "").split("/")
+        if len(parts) < 3:
+            return url
+        account_name = parts[0].split(".")[0]
+        container = parts[1]
+        blob_path = "/".join(parts[2:])
+
+        account_key = _get_blob_service().credential.account_key
+        sas_token = generate_blob_sas(
+            account_name=account_name,
+            container_name=container,
+            blob_name=blob_path,
+            account_key=account_key,
+            permission=BlobSasPermissions(read=True),
+            expiry=datetime.now(timezone.utc) + timedelta(days=7)
+        )
+        return f"{url}?{sas_token}"
+    except Exception:
+        return url
 
 
 def save_posts(data):
@@ -379,7 +422,8 @@ def get_post(post_id: str):
 # ── Image Upload ──────────────────────────────────────
 
 def upload_image_blob(filename: str, data: bytes, content_type: str = "image/jpeg"):
-    """Upload an image to blob storage and return the URL."""
+    """Upload an image to blob storage and return the URL with SAS token for access."""
+    from datetime import timedelta
     image_id = gen_id()
     ext = filename.rsplit(".", 1)[-1] if "." in filename else "jpg"
     blob_path = f"images/{image_id}.{ext}"
@@ -392,7 +436,19 @@ def upload_image_blob(filename: str, data: bytes, content_type: str = "image/jpe
         return f"/static/uploads/{image_id}.{ext}"  # For local dev
 
     # Azure blob storage
+    from azure.storage.blob import generate_blob_sas, BlobSasPermissions
     client = _get_container().get_blob_client(blob_path)
     client.upload_blob(data, overwrite=True, content_type=content_type)
-    # Return the blob URL
-    return client.url
+
+    # Generate a long-lived SAS token (1 year) for public read access
+    account_name = _get_blob_service().account_name
+    account_key = _get_blob_service().credential.account_key
+    sas_token = generate_blob_sas(
+        account_name=account_name,
+        container_name=CONTAINER_NAME,
+        blob_name=blob_path,
+        account_key=account_key,
+        permission=BlobSasPermissions(read=True),
+        expiry=datetime.now(timezone.utc) + timedelta(days=365)
+    )
+    return f"{client.url}?{sas_token}"
