@@ -65,6 +65,11 @@
           <div class="mt-24">
             <button class="btn btn-secondary" style="width:100%" onclick="exportAllJSON()" id="export-json-btn" data-i18n="export_json">导出为 JSON</button>
           </div>
+
+          <div class="mt-24" style="border-top:1px solid var(--border);padding-top:16px">
+            <h3 data-i18n="content_mgmt">内容管理</h3>
+            <button class="btn btn-secondary mt-8" style="width:100%" onclick="showPostsManager()" data-i18n="manage_posts">管理动态</button>
+          </div>
         </div>
 
         <!-- Main Content -->
@@ -816,6 +821,193 @@
       document.getElementById("editor-title").textContent =
         selectedYear && selectedClass ? `${selectedYear.name} - ${selectedClass.name}` : "";
     });
+
+    /* ── Posts Management ────────────────────────── */
+    let postsData = [];
+
+    async function showPostsManager() {
+      try {
+        const data = await apiCall("/api/admin/posts");
+        postsData = data.posts || [];
+      } catch { postsData = []; }
+
+      let html = "";
+      if (!postsData.length) {
+        html = `<p style="color:var(--text-secondary)">暂无动态</p>`;
+      } else {
+        html = `<div style="max-height:400px;overflow-y:auto">`;
+        postsData.forEach((post, i) => {
+          const date = new Date(post.created_at).toLocaleDateString();
+          const preview = post.content.length > 50 ? post.content.substring(0, 50) + "..." : post.content;
+          const imgCount = (post.images || []).length;
+          html += `<div style="display:flex;justify-content:space-between;align-items:flex-start;padding:12px 0;border-bottom:1px solid var(--border)">
+            <div style="flex:1">
+              <strong>${post.title}</strong>
+              <div style="font-size:0.85rem;color:var(--text-secondary)">${date} ${imgCount > 0 ? `· ${imgCount} 张图片` : ""}</div>
+              <div style="font-size:0.85rem;margin-top:4px">${preview}</div>
+            </div>
+            <div style="display:flex;gap:4px;margin-left:8px">
+              <button class="btn btn-sm btn-primary" onclick="showEditPost('${post.id}')">✎</button>
+              <button class="btn btn-sm btn-danger" onclick="deletePost('${post.id}')">&times;</button>
+            </div>
+          </div>`;
+        });
+        html += `</div>`;
+      }
+      html += `<button class="btn btn-primary mt-16" onclick="showCreatePost()" style="width:100%">+ 发布新动态</button>`;
+
+      showModal("管理动态", html, null);
+      document.getElementById("modal-save").style.display = "none";
+    }
+
+    function showCreatePost() {
+      showModal("发布新动态", `
+        <div class="form-group">
+          <label>标题</label>
+          <input type="text" id="post-title" placeholder="动态标题">
+        </div>
+        <div class="form-group">
+          <label>内容</label>
+          <textarea id="post-content" rows="5" style="width:100%;resize:vertical;padding:8px;border:1px solid var(--border);border-radius:4px;font-family:inherit" placeholder="动态内容..."></textarea>
+        </div>
+        <div class="form-group">
+          <label>图片</label>
+          <input type="file" id="post-images" multiple accept="image/*" onchange="previewPostImages()">
+          <div id="post-images-preview" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px"></div>
+        </div>
+      `, async () => {
+        const title = document.getElementById("post-title").value.trim();
+        const content = document.getElementById("post-content").value.trim();
+        if (!title) return showToast("请输入标题", "error");
+
+        // Upload images first
+        const imageUrls = await uploadPostImages();
+
+        try {
+          await apiCall("/api/admin/posts", {
+            method: "POST",
+            body: JSON.stringify({ title, content, images: imageUrls })
+          });
+          showToast("发布成功");
+          closeModal();
+          showPostsManager();
+        } catch (e) {
+          showToast(e.message, "error");
+        }
+      });
+      document.getElementById("modal-save").style.display = "";
+    }
+
+    window.showEditPost = async function(postId) {
+      const post = postsData.find(p => p.id === postId);
+      if (!post) return;
+
+      const existingImages = (post.images || []).map(url =>
+        `<div style="position:relative;width:80px;height:80px">
+          <img src="${url}" style="width:100%;height:100%;object-fit:cover;border-radius:4px">
+          <button onclick="removeExistingImage(this,'${url}')" style="position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;border:none;background:var(--danger);color:white;cursor:pointer;font-size:12px">&times;</button>
+        </div>`
+      ).join("");
+
+      showModal("编辑动态", `
+        <div class="form-group">
+          <label>标题</label>
+          <input type="text" id="post-title" value="${post.title}">
+        </div>
+        <div class="form-group">
+          <label>内容</label>
+          <textarea id="post-content" rows="5" style="width:100%;resize:vertical;padding:8px;border:1px solid var(--border);border-radius:4px;font-family:inherit">${post.content}</textarea>
+        </div>
+        <div class="form-group">
+          <label>现有图片</label>
+          <div id="existing-images" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">${existingImages || '<span style="color:var(--text-secondary)">无</span>'}</div>
+          <input type="hidden" id="existing-image-urls" value='${JSON.stringify(post.images || [])}'>
+        </div>
+        <div class="form-group">
+          <label>添加新图片</label>
+          <input type="file" id="post-images" multiple accept="image/*" onchange="previewPostImages()">
+          <div id="post-images-preview" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px"></div>
+        </div>
+      `, async () => {
+        const title = document.getElementById("post-title").value.trim();
+        const content = document.getElementById("post-content").value.trim();
+        if (!title) return showToast("请输入标题", "error");
+
+        // Get existing images (minus removed ones)
+        let imageUrls = JSON.parse(document.getElementById("existing-image-urls").value || "[]");
+
+        // Upload new images
+        const newUrls = await uploadPostImages();
+        imageUrls = imageUrls.concat(newUrls);
+
+        try {
+          await apiCall(`/api/admin/posts/${postId}`, {
+            method: "PUT",
+            body: JSON.stringify({ title, content, images: imageUrls })
+          });
+          showToast("更新成功");
+          closeModal();
+          showPostsManager();
+        } catch (e) {
+          showToast(e.message, "error");
+        }
+      });
+      document.getElementById("modal-save").style.display = "";
+    };
+
+    window.removeExistingImage = function(btn, url) {
+      const input = document.getElementById("existing-image-urls");
+      let urls = JSON.parse(input.value || "[]");
+      urls = urls.filter(u => u !== url);
+      input.value = JSON.stringify(urls);
+      btn.parentElement.remove();
+    };
+
+    window.deletePost = async function(postId) {
+      if (!confirm("确定要删除这条动态吗？")) return;
+      try {
+        await apiCall(`/api/admin/posts/${postId}`, { method: "DELETE" });
+        showToast("已删除");
+        showPostsManager();
+      } catch (e) {
+        showToast(e.message, "error");
+      }
+    };
+
+    function previewPostImages() {
+      const input = document.getElementById("post-images");
+      const preview = document.getElementById("post-images-preview");
+      preview.innerHTML = "";
+      Array.from(input.files).forEach((file, i) => {
+        const reader = new FileReader();
+        reader.onload = (e) => {
+          preview.innerHTML += `<div style="position:relative;width:80px;height:80px">
+            <img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover;border-radius:4px">
+          </div>`;
+        };
+        reader.readAsDataURL(file);
+      });
+    }
+
+    async function uploadPostImages() {
+      const input = document.getElementById("post-images");
+      const urls = [];
+      for (const file of input.files) {
+        const formData = new FormData();
+        formData.append("file", file);
+        try {
+          const res = await fetch("/api/admin/upload", {
+            method: "POST",
+            body: formData
+          });
+          const data = await res.json();
+          if (data.url) urls.push(data.url);
+        } catch (e) {
+          console.error("Upload failed:", e);
+        }
+      }
+      return urls;
+    }
   </script>
 </body>
 </html>

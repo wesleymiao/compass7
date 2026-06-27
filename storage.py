@@ -310,3 +310,89 @@ def get_course_library(year_id: str):
 
 def save_course_library(year_id: str, library: list):
     _write_blob(f"course_library/{year_id}.json", library)
+
+
+# ── Posts (Content Sharing) ───────────────────────────
+
+def get_posts():
+    """Get all posts sorted by created_at descending."""
+    data = _read_blob("posts.json", {"posts": []})
+    # Sort by created_at descending (newest first)
+    data["posts"].sort(key=lambda p: p.get("created_at", ""), reverse=True)
+    return data
+
+
+def save_posts(data):
+    _write_blob("posts.json", data)
+
+
+def create_post(title: str, content: str, images: list = None):
+    """Create a new post with title, content, and optional images."""
+    data = get_posts()
+    post = {
+        "id": gen_id(),
+        "title": title,
+        "content": content,
+        "images": images or [],  # List of image URLs
+        "created_at": datetime.now(timezone.utc).isoformat(),
+        "updated_at": datetime.now(timezone.utc).isoformat()
+    }
+    data["posts"].append(post)
+    save_posts(data)
+    return post
+
+
+def update_post(post_id: str, title: str = None, content: str = None, images: list = None):
+    """Update an existing post."""
+    data = get_posts()
+    for post in data["posts"]:
+        if post["id"] == post_id:
+            if title is not None:
+                post["title"] = title
+            if content is not None:
+                post["content"] = content
+            if images is not None:
+                post["images"] = images
+            post["updated_at"] = datetime.now(timezone.utc).isoformat()
+            save_posts(data)
+            return post
+    return None
+
+
+def delete_post(post_id: str):
+    """Delete a post by ID."""
+    data = get_posts()
+    data["posts"] = [p for p in data["posts"] if p["id"] != post_id]
+    save_posts(data)
+    return True
+
+
+def get_post(post_id: str):
+    """Get a single post by ID."""
+    data = get_posts()
+    for post in data["posts"]:
+        if post["id"] == post_id:
+            return post
+    return None
+
+
+# ── Image Upload ──────────────────────────────────────
+
+def upload_image_blob(filename: str, data: bytes, content_type: str = "image/jpeg"):
+    """Upload an image to blob storage and return the URL."""
+    image_id = gen_id()
+    ext = filename.rsplit(".", 1)[-1] if "." in filename else "jpg"
+    blob_path = f"images/{image_id}.{ext}"
+
+    if STORAGE_MODE == "local":
+        fpath = os.path.join(LOCAL_DATA_DIR, blob_path)
+        os.makedirs(os.path.dirname(fpath), exist_ok=True)
+        with open(fpath, "wb") as f:
+            f.write(data)
+        return f"/static/uploads/{image_id}.{ext}"  # For local dev
+
+    # Azure blob storage
+    client = _get_container().get_blob_client(blob_path)
+    client.upload_blob(data, overwrite=True, content_type=content_type)
+    # Return the blob URL
+    return client.url

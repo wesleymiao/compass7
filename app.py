@@ -329,6 +329,94 @@ def get_selections():
     return jsonify(sel)
 
 
+# ── Admin: Posts (Content Sharing) ────────────────────
+
+@app.route("/api/admin/posts", methods=["GET"])
+@admin_required
+def admin_list_posts():
+    return jsonify(storage.get_posts())
+
+
+@app.route("/api/admin/posts", methods=["POST"])
+@admin_required
+def admin_create_post():
+    data = request.get_json()
+    title = data.get("title", "").strip()
+    content = data.get("content", "").strip()
+    images = data.get("images", [])
+    if not title:
+        return jsonify({"error": "Title required"}), 400
+    post = storage.create_post(title, content, images)
+    return jsonify(post), 201
+
+
+@app.route("/api/admin/posts/<post_id>", methods=["PUT"])
+@admin_required
+def admin_update_post(post_id):
+    data = request.get_json()
+    post = storage.update_post(
+        post_id,
+        title=data.get("title"),
+        content=data.get("content"),
+        images=data.get("images")
+    )
+    if not post:
+        return jsonify({"error": "Post not found"}), 404
+    return jsonify(post)
+
+
+@app.route("/api/admin/posts/<post_id>", methods=["DELETE"])
+@admin_required
+def admin_delete_post(post_id):
+    storage.delete_post(post_id)
+    return jsonify({"message": "Deleted"})
+
+
+@app.route("/api/admin/upload", methods=["POST"])
+@admin_required
+def admin_upload_image():
+    """Upload an image and return the URL."""
+    if "file" not in request.files:
+        return jsonify({"error": "No file provided"}), 400
+    file = request.files["file"]
+    if file.filename == "":
+        return jsonify({"error": "No file selected"}), 400
+
+    # Check file type
+    allowed = {"png", "jpg", "jpeg", "gif", "webp"}
+    ext = file.filename.rsplit(".", 1)[-1].lower() if "." in file.filename else ""
+    if ext not in allowed:
+        return jsonify({"error": f"File type not allowed. Allowed: {', '.join(allowed)}"}), 400
+
+    content_type = file.content_type or f"image/{ext}"
+    url = storage.upload_image_blob(file.filename, file.read(), content_type)
+    return jsonify({"url": url})
+
+
+# ── Public: Posts ─────────────────────────────────────
+
+@app.route("/api/posts", methods=["GET"])
+def public_list_posts():
+    """Get all posts for public viewing."""
+    return jsonify(storage.get_posts())
+
+
+@app.route("/api/posts/<post_id>", methods=["GET"])
+def public_get_post(post_id):
+    """Get a single post."""
+    post = storage.get_post(post_id)
+    if not post:
+        return jsonify({"error": "Post not found"}), 404
+    return jsonify(post)
+
+
+# ── Pages: Posts ──────────────────────────────────────
+
+@app.route("/posts")
+def posts_page():
+    return send_from_directory("templates", "posts.html")
+
+
 # ── Test Reset (only in testing mode) ─────────────────
 
 if os.environ.get("TESTING_MODE") == "1":

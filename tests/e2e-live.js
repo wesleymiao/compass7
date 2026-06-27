@@ -343,6 +343,48 @@ async function addCourseAtSlot(page, day, period, nameCn, nameEn, teacher, room)
   console.log(`\nCompass7 E2E Tests \u2014 ${BASE}\n`);
 
   // ═══════════════════════════════════════════════
+  // HOME PAGE (test first, before any admin actions)
+  // ═══════════════════════════════════════════════
+
+  await test('Home page loads with tool cards', async () => {
+    const page = await browser.newPage();
+    await page.goto(`${BASE}/home`);
+    await page.waitForSelector('.tools-grid', { timeout: 10000 });
+
+    // Check timetable card exists and is clickable
+    const timetableCard = await page.locator('.tool-card[href="/timetable"]');
+    assert(await timetableCard.count() > 0, 'Timetable card not found');
+
+    // Check other tool cards exist (disabled)
+    const disabledCards = await page.locator('.tool-card.disabled').count();
+    assert(disabledCards >= 3, `Expected at least 3 disabled cards, got ${disabledCards}`);
+
+    await shot(page, '00-home-page');
+    await page.close();
+  });
+
+  await test('Root redirects to home', async () => {
+    const page = await browser.newPage();
+    await page.goto(BASE);
+    await page.waitForTimeout(2000);
+    const url = page.url();
+    assert(url.includes('/home'), `Expected redirect to /home, got: ${url}`);
+    await page.close();
+  });
+
+  await test('Home timetable link works', async () => {
+    const page = await browser.newPage();
+    await page.goto(`${BASE}/home`);
+    await page.waitForSelector('.tool-card[href="/timetable"]', { timeout: 10000 });
+    await page.click('.tool-card[href="/timetable"]');
+    await page.waitForTimeout(2000);
+    const url = page.url();
+    assert(url.includes('/timetable'), `Expected navigation to /timetable, got: ${url}`);
+    await shot(page, '00b-home-to-timetable');
+    await page.close();
+  });
+
+  // ═══════════════════════════════════════════════
   // CLEANUP FROM PREVIOUS RUN (at start, not end)
   // ═══════════════════════════════════════════════
 
@@ -603,7 +645,7 @@ async function addCourseAtSlot(page, day, period, nameCn, nameEn, teacher, room)
 
   await test('User sees test year and both classes', async () => {
     const page = await browser.newPage();
-    await page.goto(BASE);
+    await page.goto(`${BASE}/timetable`);
     await page.waitForSelector('#step-1', { timeout: 10000 });
     await page.waitForTimeout(2000);
 
@@ -620,7 +662,7 @@ async function addCourseAtSlot(page, day, period, nameCn, nameEn, teacher, room)
 
   await test('User views elective selection and schedule preview', async () => {
     const page = await browser.newPage();
-    await page.goto(BASE);
+    await page.goto(`${BASE}/timetable`);
     await page.waitForSelector('#step-1', { timeout: 10000 });
     await page.waitForTimeout(2000);
 
@@ -660,7 +702,7 @@ async function addCourseAtSlot(page, day, period, nameCn, nameEn, teacher, room)
 
   await test('User register / login', async () => {
     const page = await browser.newPage();
-    await page.goto(BASE);
+    await page.goto(`${BASE}/timetable`);
     await page.waitForTimeout(1000);
 
     const loginBtn = page.locator('#login-btn');
@@ -699,7 +741,7 @@ async function addCourseAtSlot(page, day, period, nameCn, nameEn, teacher, room)
   await test('Mobile viewport', async () => {
     const ctx = await browser.newContext({ viewport: { width: 375, height: 812 } });
     const page = await ctx.newPage();
-    await page.goto(BASE);
+    await page.goto(`${BASE}/home`);
     await page.waitForSelector('header', { timeout: 10000 });
     await shot(page, '18-mobile');
     assert(await page.locator('header').isVisible());
@@ -708,7 +750,7 @@ async function addCourseAtSlot(page, day, period, nameCn, nameEn, teacher, room)
 
   await test('Dark mode', async () => {
     const page = await browser.newPage();
-    await page.goto(BASE);
+    await page.goto(`${BASE}/home`);
     await page.waitForTimeout(1000);
     await page.click('#theme-toggle');
     await page.waitForTimeout(500);
@@ -720,12 +762,12 @@ async function addCourseAtSlot(page, day, period, nameCn, nameEn, teacher, room)
 
   await test('Language toggle', async () => {
     const page = await browser.newPage();
-    await page.goto(BASE);
+    await page.goto(`${BASE}/home`);
     await page.waitForTimeout(1000);
-    const before = await page.locator('h2').first().textContent();
+    const before = await page.locator('h1').first().textContent();
     await page.click('#lang-toggle');
     await page.waitForTimeout(500);
-    const after = await page.locator('h2').first().textContent();
+    const after = await page.locator('h1').first().textContent();
     await shot(page, '20-lang');
     assert(before !== after, 'Language did not change');
     await page.close();
@@ -776,7 +818,7 @@ async function addCourseAtSlot(page, day, period, nameCn, nameEn, teacher, room)
 
   await test('User page has favicon', async () => {
     const page = await browser.newPage();
-    await page.goto(BASE);
+    await page.goto(`${BASE}/timetable`);
     await page.waitForTimeout(1000);
     const favicon = await page.$('link[rel="icon"]');
     assert(favicon, 'No favicon link found on user page');
@@ -804,7 +846,7 @@ async function addCourseAtSlot(page, day, period, nameCn, nameEn, teacher, room)
 
   await test('Image export panel opens with resolution inputs', async () => {
     const page = await browser.newPage();
-    await page.goto(BASE);
+    await page.goto(`${BASE}/timetable`);
     await page.waitForTimeout(2000);
 
     // Navigate to step 4 via clicking year -> class -> step4
@@ -851,7 +893,7 @@ async function addCourseAtSlot(page, day, period, nameCn, nameEn, teacher, room)
 
   await test('Schedule preview shows full table without scroll', async () => {
     const page = await browser.newPage();
-    await page.goto(BASE);
+    await page.goto(`${BASE}/timetable`);
     await page.waitForTimeout(2000);
 
     const yearBtn = await page.$('#year-list .btn');

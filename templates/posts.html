@@ -1,0 +1,309 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Compass7 - 动态</title>
+  <link rel="icon" type="image/svg+xml" href="/static/img/favicon-user.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="/static/img/favicon-user-32.png">
+  <link rel="apple-touch-icon" href="/static/img/favicon-user.png">
+  <link rel="stylesheet" href="/static/css/style.css">
+  <style>
+    .posts-container {
+      max-width: 800px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    .page-header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+
+    .page-header h1 {
+      font-size: 2rem;
+      margin-bottom: 8px;
+    }
+
+    .post-card {
+      background: var(--glass-bg);
+      backdrop-filter: blur(var(--glass-blur));
+      -webkit-backdrop-filter: blur(var(--glass-blur));
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius);
+      padding: 24px;
+      margin-bottom: 24px;
+      animation: fadeInUp 0.5s ease-out backwards;
+    }
+
+    .post-card:nth-child(1) { animation-delay: 0.1s; }
+    .post-card:nth-child(2) { animation-delay: 0.2s; }
+    .post-card:nth-child(3) { animation-delay: 0.3s; }
+
+    .post-header {
+      margin-bottom: 16px;
+    }
+
+    .post-title {
+      font-size: 1.4rem;
+      font-weight: 600;
+      margin-bottom: 8px;
+      color: var(--text);
+    }
+
+    .post-date {
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+    }
+
+    .post-content {
+      line-height: 1.8;
+      white-space: pre-wrap;
+      margin-bottom: 16px;
+    }
+
+    .post-images {
+      display: grid;
+      gap: 12px;
+      margin-top: 16px;
+    }
+
+    .post-images.single {
+      grid-template-columns: 1fr;
+    }
+
+    .post-images.double {
+      grid-template-columns: repeat(2, 1fr);
+    }
+
+    .post-images.multi {
+      grid-template-columns: repeat(3, 1fr);
+    }
+
+    .post-image {
+      width: 100%;
+      border-radius: var(--radius-sm);
+      cursor: pointer;
+      transition: transform 0.2s;
+      object-fit: cover;
+      aspect-ratio: 4/3;
+    }
+
+    .post-image:hover {
+      transform: scale(1.02);
+    }
+
+    .post-images.single .post-image {
+      aspect-ratio: 16/9;
+      max-height: 400px;
+      object-fit: contain;
+      background: var(--bg-secondary);
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--text-secondary);
+    }
+
+    .empty-state .icon {
+      font-size: 4rem;
+      margin-bottom: 16px;
+    }
+
+    /* Lightbox */
+    .lightbox {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.9);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      cursor: pointer;
+    }
+
+    .lightbox.active {
+      display: flex;
+    }
+
+    .lightbox img {
+      max-width: 90%;
+      max-height: 90%;
+      object-fit: contain;
+      border-radius: 8px;
+    }
+
+    .lightbox-close {
+      position: absolute;
+      top: 20px;
+      right: 20px;
+      color: white;
+      font-size: 2rem;
+      cursor: pointer;
+      width: 40px;
+      height: 40px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255,255,255,0.1);
+      border-radius: 50%;
+    }
+
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--primary);
+      text-decoration: none;
+      margin-bottom: 16px;
+    }
+
+    .back-link:hover {
+      text-decoration: underline;
+    }
+
+    @media (max-width: 600px) {
+      .post-images.multi {
+        grid-template-columns: repeat(2, 1fr);
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="container">
+      <a href="/home" class="logo">Compass7</a>
+      <div class="header-actions">
+        <button class="btn-icon" id="theme-toggle" onclick="toggleTheme()">🌙</button>
+        <button class="btn btn-sm btn-secondary" onclick="toggleLang()" id="lang-toggle">EN/中</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="posts-container">
+    <a href="/home" class="back-link">← 返回主页</a>
+
+    <div class="page-header">
+      <h1 data-i18n="posts_title">动态</h1>
+      <p class="text-secondary" data-i18n="posts_desc">查看最新分享的内容</p>
+    </div>
+
+    <div id="posts-list">
+      <div class="empty-state">
+        <div class="icon">📝</div>
+        <p>加载中...</p>
+      </div>
+    </div>
+  </main>
+
+  <!-- Lightbox for images -->
+  <div class="lightbox" id="lightbox" onclick="closeLightbox()">
+    <span class="lightbox-close">&times;</span>
+    <img id="lightbox-img" src="" alt="">
+  </div>
+
+  <script src="/static/js/i18n.js"></script>
+  <script src="/static/js/theme.js"></script>
+  <script>
+    // Add i18n strings
+    if (typeof i18n !== 'undefined') {
+      Object.assign(i18n.zh, {
+        posts_title: '动态',
+        posts_desc: '查看最新分享的内容',
+        no_posts: '暂无动态'
+      });
+      Object.assign(i18n.en, {
+        posts_title: 'Posts',
+        posts_desc: 'View the latest shared content',
+        no_posts: 'No posts yet'
+      });
+    }
+
+    async function loadPosts() {
+      try {
+        const res = await fetch("/api/posts");
+        const data = await res.json();
+        renderPosts(data.posts || []);
+      } catch (e) {
+        console.error("Failed to load posts:", e);
+        document.getElementById("posts-list").innerHTML = `
+          <div class="empty-state">
+            <div class="icon">⚠️</div>
+            <p>加载失败，请稍后重试</p>
+          </div>
+        `;
+      }
+    }
+
+    function renderPosts(posts) {
+      const container = document.getElementById("posts-list");
+
+      if (!posts.length) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <div class="icon">📝</div>
+            <p data-i18n="no_posts">${t ? t("no_posts") : "暂无动态"}</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = posts.map(post => {
+        const date = new Date(post.created_at).toLocaleDateString("zh-CN", {
+          year: "numeric",
+          month: "long",
+          day: "numeric"
+        });
+
+        let imagesHtml = "";
+        if (post.images && post.images.length > 0) {
+          const gridClass = post.images.length === 1 ? "single" :
+                           post.images.length === 2 ? "double" : "multi";
+          imagesHtml = `<div class="post-images ${gridClass}">
+            ${post.images.map(url => `<img src="${url}" class="post-image" onclick="openLightbox('${url}')" alt="图片">`).join("")}
+          </div>`;
+        }
+
+        return `
+          <article class="post-card">
+            <div class="post-header">
+              <h2 class="post-title">${escapeHtml(post.title)}</h2>
+              <div class="post-date">${date}</div>
+            </div>
+            <div class="post-content">${escapeHtml(post.content)}</div>
+            ${imagesHtml}
+          </article>
+        `;
+      }).join("");
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement("div");
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    function openLightbox(url) {
+      event.stopPropagation();
+      document.getElementById("lightbox-img").src = url;
+      document.getElementById("lightbox").classList.add("active");
+    }
+
+    function closeLightbox() {
+      document.getElementById("lightbox").classList.remove("active");
+    }
+
+    // Close lightbox with Escape key
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") closeLightbox();
+    });
+
+    // Load posts on page load
+    loadPosts();
+  </script>
+</body>
+</html>
