@@ -312,16 +312,19 @@ def save_course_library(year_id: str, library: list):
     _write_blob(f"course_library/{year_id}.json", library)
 
 
-# ── Posts (Content Sharing) ───────────────────────────
+# ── Clubs (社团介绍) ───────────────────────────────────
 
-def get_posts():
-    """Get all posts sorted by created_at descending."""
-    data = _read_blob("posts.json", {"posts": []})
+def get_clubs():
+    """Get all clubs sorted by created_at descending."""
+    data = _read_blob("clubs.json", {"clubs": []})
     # Sort by created_at descending (newest first)
-    data["posts"].sort(key=lambda p: p.get("created_at", ""), reverse=True)
+    data["clubs"].sort(key=lambda c: c.get("created_at", ""), reverse=True)
     # Ensure image URLs have valid SAS tokens
-    for post in data["posts"]:
-        post["images"] = [_ensure_sas_url(url) for url in (post.get("images") or [])]
+    for club in data["clubs"]:
+        if club.get("qrcode"):
+            club["qrcode"] = _ensure_sas_url(club["qrcode"])
+        if club.get("leader_photo"):
+            club["leader_photo"] = _ensure_sas_url(club["leader_photo"])
     return data
 
 
@@ -365,57 +368,69 @@ def _ensure_sas_url(url: str) -> str:
         return url
 
 
-def save_posts(data):
-    _write_blob("posts.json", data)
+def save_clubs(data):
+    _write_blob("clubs.json", data)
 
 
-def create_post(title: str, content: str, images: list = None):
-    """Create a new post with title, content, and optional images."""
-    data = get_posts()
-    post = {
+def create_club(name: str, description: str, qrcode: str = None,
+                leader_name: str = "", leader_intro: str = "", leader_photo: str = None):
+    """Create a new club with name, description, qrcode, and leader info."""
+    data = get_clubs()
+    club = {
         "id": gen_id(),
-        "title": title,
-        "content": content,
-        "images": images or [],  # List of image URLs
+        "name": name,
+        "description": description,
+        "qrcode": qrcode,  # WeChat group QR code image URL
+        "leader_name": leader_name,
+        "leader_intro": leader_intro,
+        "leader_photo": leader_photo,
         "created_at": datetime.now(timezone.utc).isoformat(),
         "updated_at": datetime.now(timezone.utc).isoformat()
     }
-    data["posts"].append(post)
-    save_posts(data)
-    return post
+    data["clubs"].append(club)
+    save_clubs(data)
+    return club
 
 
-def update_post(post_id: str, title: str = None, content: str = None, images: list = None):
-    """Update an existing post."""
-    data = get_posts()
-    for post in data["posts"]:
-        if post["id"] == post_id:
-            if title is not None:
-                post["title"] = title
-            if content is not None:
-                post["content"] = content
-            if images is not None:
-                post["images"] = images
-            post["updated_at"] = datetime.now(timezone.utc).isoformat()
-            save_posts(data)
-            return post
+def update_club(club_id: str, name: str = None, description: str = None,
+                qrcode: str = None, leader_name: str = None,
+                leader_intro: str = None, leader_photo: str = None):
+    """Update an existing club."""
+    data = get_clubs()
+    for club in data["clubs"]:
+        if club["id"] == club_id:
+            if name is not None:
+                club["name"] = name
+            if description is not None:
+                club["description"] = description
+            if qrcode is not None:
+                club["qrcode"] = qrcode
+            if leader_name is not None:
+                club["leader_name"] = leader_name
+            if leader_intro is not None:
+                club["leader_intro"] = leader_intro
+            if leader_photo is not None:
+                club["leader_photo"] = leader_photo
+            club["updated_at"] = datetime.now(timezone.utc).isoformat()
+            save_clubs(data)
+            return club
     return None
 
 
-def delete_post(post_id: str):
-    """Delete a post by ID."""
-    data = get_posts()
-    data["posts"] = [p for p in data["posts"] if p["id"] != post_id]
-    save_posts(data)
+def delete_club(club_id: str):
+    """Delete a club by ID."""
+    data = get_clubs()
+    data["clubs"] = [c for c in data["clubs"] if c["id"] != club_id]
+    save_clubs(data)
     return True
 
 
-def get_post(post_id: str):
-    """Get a single post by ID."""
-    data = get_posts()
-    for post in data["posts"]:
-        if post["id"] == post_id:
-            return post
+def get_club(club_id: str):
+    """Get a single club by ID."""
+    data = get_clubs()
+    for club in data["clubs"]:
+        if club["id"] == club_id:
+            return club
     return None
 
 

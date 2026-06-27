@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Compass7 - 社团介绍</title>
+  <link rel="icon" type="image/svg+xml" href="/static/img/favicon-user.svg">
+  <link rel="icon" type="image/png" sizes="32x32" href="/static/img/favicon-user-32.png">
+  <link rel="apple-touch-icon" href="/static/img/favicon-user.png">
+  <link rel="stylesheet" href="/static/css/style.css">
+  <style>
+    .clubs-container {
+      max-width: 1000px;
+      margin: 0 auto;
+      padding: 20px;
+    }
+
+    .page-header {
+      text-align: center;
+      margin-bottom: 32px;
+    }
+
+    .page-header h1 {
+      font-size: 2rem;
+      margin-bottom: 8px;
+    }
+
+    .clubs-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+      gap: 24px;
+    }
+
+    .club-card {
+      background: var(--glass-bg);
+      backdrop-filter: blur(var(--glass-blur));
+      -webkit-backdrop-filter: blur(var(--glass-blur));
+      border: 1px solid var(--glass-border);
+      border-radius: var(--radius);
+      padding: 24px;
+      animation: fadeInUp 0.5s ease-out backwards;
+      cursor: pointer;
+      transition: all var(--transition);
+    }
+
+    .club-card:hover {
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-lg);
+      border-color: var(--primary);
+    }
+
+    .club-card:nth-child(1) { animation-delay: 0.1s; }
+    .club-card:nth-child(2) { animation-delay: 0.15s; }
+    .club-card:nth-child(3) { animation-delay: 0.2s; }
+    .club-card:nth-child(4) { animation-delay: 0.25s; }
+    .club-card:nth-child(5) { animation-delay: 0.3s; }
+    .club-card:nth-child(6) { animation-delay: 0.35s; }
+
+    .club-name {
+      font-size: 1.3rem;
+      font-weight: 600;
+      margin-bottom: 12px;
+      color: var(--text);
+    }
+
+    .club-description {
+      color: var(--text-secondary);
+      font-size: 0.95rem;
+      line-height: 1.6;
+      display: -webkit-box;
+      -webkit-line-clamp: 3;
+      -webkit-box-orient: vertical;
+      overflow: hidden;
+    }
+
+    .club-leader-preview {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-top: 16px;
+      padding-top: 16px;
+      border-top: 1px solid var(--border);
+    }
+
+    .club-leader-photo-small {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      object-fit: cover;
+      background: var(--bg-secondary);
+    }
+
+    .club-leader-info-small {
+      flex: 1;
+    }
+
+    .club-leader-name-small {
+      font-weight: 500;
+      font-size: 0.9rem;
+    }
+
+    .club-leader-title {
+      font-size: 0.8rem;
+      color: var(--text-secondary);
+    }
+
+    .empty-state {
+      text-align: center;
+      padding: 60px 20px;
+      color: var(--text-secondary);
+    }
+
+    .empty-state .icon {
+      font-size: 4rem;
+      margin-bottom: 16px;
+    }
+
+    .back-link {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      color: var(--primary);
+      text-decoration: none;
+      margin-bottom: 16px;
+    }
+
+    .back-link:hover {
+      text-decoration: underline;
+    }
+
+    /* Club Detail Modal */
+    .club-modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0,0,0,0.6);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      padding: 20px;
+    }
+
+    .club-modal-overlay.active {
+      display: flex;
+    }
+
+    .club-modal {
+      background: var(--bg);
+      border-radius: var(--radius);
+      max-width: 600px;
+      width: 100%;
+      max-height: 90vh;
+      overflow-y: auto;
+      position: relative;
+      animation: fadeInUp 0.3s ease-out;
+    }
+
+    .club-modal-close {
+      position: absolute;
+      top: 16px;
+      right: 16px;
+      width: 32px;
+      height: 32px;
+      border-radius: 50%;
+      border: none;
+      background: var(--bg-secondary);
+      color: var(--text);
+      font-size: 1.2rem;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 10;
+    }
+
+    .club-modal-content {
+      padding: 32px;
+    }
+
+    .club-modal-name {
+      font-size: 1.8rem;
+      font-weight: 700;
+      margin-bottom: 16px;
+      padding-right: 40px;
+    }
+
+    .club-modal-description {
+      line-height: 1.8;
+      white-space: pre-wrap;
+      margin-bottom: 24px;
+    }
+
+    .club-section {
+      margin-bottom: 24px;
+    }
+
+    .club-section-title {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 12px;
+      color: var(--primary);
+    }
+
+    .club-leader-card {
+      display: flex;
+      gap: 16px;
+      background: var(--bg-secondary);
+      padding: 16px;
+      border-radius: var(--radius-sm);
+    }
+
+    .club-leader-photo {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      object-fit: cover;
+      flex-shrink: 0;
+    }
+
+    .club-leader-photo-placeholder {
+      width: 80px;
+      height: 80px;
+      border-radius: 50%;
+      background: var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 2rem;
+      flex-shrink: 0;
+    }
+
+    .club-leader-details {
+      flex: 1;
+    }
+
+    .club-leader-name {
+      font-size: 1.1rem;
+      font-weight: 600;
+      margin-bottom: 8px;
+    }
+
+    .club-leader-intro {
+      font-size: 0.9rem;
+      color: var(--text-secondary);
+      line-height: 1.6;
+    }
+
+    .club-qrcode {
+      text-align: center;
+    }
+
+    .club-qrcode img {
+      max-width: 200px;
+      border-radius: var(--radius-sm);
+      border: 1px solid var(--border);
+    }
+
+    .club-qrcode-hint {
+      margin-top: 8px;
+      font-size: 0.85rem;
+      color: var(--text-secondary);
+    }
+
+    @media (max-width: 600px) {
+      .clubs-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .club-leader-card {
+        flex-direction: column;
+        align-items: center;
+        text-align: center;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <div class="container">
+      <a href="/home" class="logo">Compass7</a>
+      <div class="header-actions">
+        <button class="btn-icon" id="theme-toggle" onclick="toggleTheme()">&#127769;</button>
+        <button class="btn btn-sm btn-secondary" onclick="toggleLang()" id="lang-toggle">EN/中</button>
+      </div>
+    </div>
+  </header>
+
+  <main class="clubs-container">
+    <a href="/home" class="back-link">&larr; <span data-i18n="back_home">返回主页</span></a>
+
+    <div class="page-header">
+      <h1 data-i18n="clubs_title">社团介绍</h1>
+      <p class="text-secondary" data-i18n="clubs_desc">了解学校各个社团，找到你感兴趣的活动</p>
+    </div>
+
+    <div id="clubs-list" class="clubs-grid">
+      <div class="empty-state">
+        <div class="icon">&#127914;</div>
+        <p>加载中...</p>
+      </div>
+    </div>
+  </main>
+
+  <!-- Club Detail Modal -->
+  <div class="club-modal-overlay" id="club-modal" onclick="closeClubModal(event)">
+    <div class="club-modal" onclick="event.stopPropagation()">
+      <button class="club-modal-close" onclick="closeClubModal()">&times;</button>
+      <div class="club-modal-content" id="club-modal-content">
+        <!-- Filled by JS -->
+      </div>
+    </div>
+  </div>
+
+  <script src="/static/js/i18n.js"></script>
+  <script src="/static/js/theme.js"></script>
+  <script>
+    // Add i18n strings
+    if (typeof i18n !== 'undefined') {
+      Object.assign(i18n.zh, {
+        clubs_title: '社团介绍',
+        clubs_desc: '了解学校各个社团，找到你感兴趣的活动',
+        no_clubs: '暂无社团信息',
+        back_home: '返回主页',
+        leader: '社长',
+        scan_to_join: '扫码加入微信群',
+        leader_intro: '社长介绍'
+      });
+      Object.assign(i18n.en, {
+        clubs_title: 'School Clubs',
+        clubs_desc: 'Learn about school clubs and find activities you are interested in',
+        no_clubs: 'No clubs yet',
+        back_home: 'Back to Home',
+        leader: 'Leader',
+        scan_to_join: 'Scan to join WeChat group',
+        leader_intro: 'Leader Introduction'
+      });
+      applyI18n();
+    }
+
+    let clubsData = [];
+
+    async function loadClubs() {
+      try {
+        const res = await fetch("/api/clubs");
+        const data = await res.json();
+        clubsData = data.clubs || [];
+        renderClubs(clubsData);
+      } catch (e) {
+        console.error("Failed to load clubs:", e);
+        document.getElementById("clubs-list").innerHTML = `
+          <div class="empty-state">
+            <div class="icon">&#9888;&#65039;</div>
+            <p>加载失败，请稍后重试</p>
+          </div>
+        `;
+      }
+    }
+
+    function renderClubs(clubs) {
+      const container = document.getElementById("clubs-list");
+
+      if (!clubs.length) {
+        container.innerHTML = `
+          <div class="empty-state">
+            <div class="icon">&#127914;</div>
+            <p data-i18n="no_clubs">${t ? t("no_clubs") : "暂无社团信息"}</p>
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = clubs.map((club, idx) => {
+        let leaderHtml = '';
+        if (club.leader_name) {
+          const photoHtml = club.leader_photo
+            ? `<img src="${club.leader_photo}" class="club-leader-photo-small" alt="">`
+            : `<div class="club-leader-photo-small" style="background:var(--bg-secondary);display:flex;align-items:center;justify-content:center;font-size:1.2rem">&#128100;</div>`;
+          leaderHtml = `
+            <div class="club-leader-preview">
+              ${photoHtml}
+              <div class="club-leader-info-small">
+                <div class="club-leader-name-small">${escapeHtml(club.leader_name)}</div>
+                <div class="club-leader-title" data-i18n="leader">${t ? t("leader") : "社长"}</div>
+              </div>
+            </div>
+          `;
+        }
+
+        return `
+          <div class="club-card" onclick="showClubDetail('${club.id}')">
+            <div class="club-name">${escapeHtml(club.name)}</div>
+            <div class="club-description">${escapeHtml(club.description || '')}</div>
+            ${leaderHtml}
+          </div>
+        `;
+      }).join("");
+    }
+
+    function showClubDetail(clubId) {
+      const club = clubsData.find(c => c.id === clubId);
+      if (!club) return;
+
+      let leaderHtml = '';
+      if (club.leader_name) {
+        const photoHtml = club.leader_photo
+          ? `<img src="${club.leader_photo}" class="club-leader-photo" alt="">`
+          : `<div class="club-leader-photo-placeholder">&#128100;</div>`;
+        leaderHtml = `
+          <div class="club-section">
+            <div class="club-section-title" data-i18n="leader_intro">${t ? t("leader_intro") : "社长介绍"}</div>
+            <div class="club-leader-card">
+              ${photoHtml}
+              <div class="club-leader-details">
+                <div class="club-leader-name">${escapeHtml(club.leader_name)}</div>
+                <div class="club-leader-intro">${escapeHtml(club.leader_intro || '')}</div>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+
+      let qrcodeHtml = '';
+      if (club.qrcode) {
+        qrcodeHtml = `
+          <div class="club-section">
+            <div class="club-section-title" data-i18n="scan_to_join">${t ? t("scan_to_join") : "扫码加入微信群"}</div>
+            <div class="club-qrcode">
+              <img src="${club.qrcode}" alt="QR Code">
+              <div class="club-qrcode-hint" data-i18n="scan_to_join">${t ? t("scan_to_join") : "扫码加入微信群"}</div>
+            </div>
+          </div>
+        `;
+      }
+
+      document.getElementById("club-modal-content").innerHTML = `
+        <div class="club-modal-name">${escapeHtml(club.name)}</div>
+        <div class="club-modal-description">${escapeHtml(club.description || '')}</div>
+        ${leaderHtml}
+        ${qrcodeHtml}
+      `;
+
+      document.getElementById("club-modal").classList.add("active");
+      document.body.style.overflow = "hidden";
+    }
+
+    function closeClubModal(event) {
+      if (event && event.target !== event.currentTarget) return;
+      document.getElementById("club-modal").classList.remove("active");
+      document.body.style.overflow = "";
+    }
+
+    function escapeHtml(text) {
+      const div = document.createElement("div");
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    // Close modal with Escape key
+    document.addEventListener("keydown", (e) => {
+      if (e.key === "Escape") closeClubModal();
+    });
+
+    // Load clubs on page load
+    loadClubs();
+  </script>
+</body>
+</html>

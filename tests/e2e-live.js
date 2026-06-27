@@ -355,9 +355,13 @@ async function addCourseAtSlot(page, day, period, nameCn, nameEn, teacher, room)
     const timetableCard = await page.locator('.tool-card[href="/timetable"]');
     assert(await timetableCard.count() > 0, 'Timetable card not found');
 
-    // Check other tool cards exist (disabled)
+    // Check clubs card exists and is clickable
+    const clubsCard = await page.locator('.tool-card[href="/clubs"]');
+    assert(await clubsCard.count() > 0, 'Clubs card not found');
+
+    // Check disabled (coming soon) cards exist
     const disabledCards = await page.locator('.tool-card.disabled').count();
-    assert(disabledCards >= 3, `Expected at least 3 disabled cards, got ${disabledCards}`);
+    assert(disabledCards >= 2, `Expected at least 2 disabled cards, got ${disabledCards}`);
 
     await shot(page, '00-home-page');
     await page.close();
@@ -381,6 +385,23 @@ async function addCourseAtSlot(page, day, period, nameCn, nameEn, teacher, room)
     const url = page.url();
     assert(url.includes('/timetable'), `Expected navigation to /timetable, got: ${url}`);
     await shot(page, '00b-home-to-timetable');
+    await page.close();
+  });
+
+  await test('Clubs page loads', async () => {
+    const page = await browser.newPage();
+    await page.goto(`${BASE}/clubs`);
+    await page.waitForSelector('.clubs-container', { timeout: 10000 });
+
+    // Check page header
+    const header = await page.locator('.page-header h1');
+    assert(await header.count() > 0, 'Clubs page header not found');
+
+    // Check back link
+    const backLink = await page.locator('.back-link');
+    assert(await backLink.count() > 0, 'Back link not found');
+
+    await shot(page, '00c-clubs-page');
     await page.close();
   });
 

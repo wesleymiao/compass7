@@ -68,7 +68,7 @@
 
           <div class="mt-24" style="border-top:1px solid var(--border);padding-top:16px">
             <h3 data-i18n="content_mgmt">内容管理</h3>
-            <button class="btn btn-secondary mt-8" style="width:100%" onclick="showPostsManager()" data-i18n="manage_posts">管理动态</button>
+            <button class="btn btn-secondary mt-8" style="width:100%" onclick="showClubsManager()" data-i18n="manage_clubs">管理社团</button>
           </div>
         </div>
 
@@ -822,75 +822,99 @@
         selectedYear && selectedClass ? `${selectedYear.name} - ${selectedClass.name}` : "";
     });
 
-    /* ── Posts Management ────────────────────────── */
-    let postsData = [];
+    /* ── Clubs Management (社团管理) ────────────────────── */
+    let clubsData = [];
 
-    async function showPostsManager() {
+    async function showClubsManager() {
       try {
-        const data = await apiCall("/api/admin/posts");
-        postsData = data.posts || [];
-      } catch { postsData = []; }
+        const data = await apiCall("/api/admin/clubs");
+        clubsData = data.clubs || [];
+      } catch { clubsData = []; }
 
       let html = "";
-      if (!postsData.length) {
-        html = `<p style="color:var(--text-secondary)">暂无动态</p>`;
+      if (!clubsData.length) {
+        html = `<p style="color:var(--text-secondary)">暂无社团</p>`;
       } else {
         html = `<div style="max-height:400px;overflow-y:auto">`;
-        postsData.forEach((post, i) => {
-          const date = new Date(post.created_at).toLocaleDateString();
-          const preview = post.content.length > 50 ? post.content.substring(0, 50) + "..." : post.content;
-          const imgCount = (post.images || []).length;
+        clubsData.forEach((club, i) => {
+          const leaderInfo = club.leader_name ? ` · 社长: ${club.leader_name}` : "";
           html += `<div style="display:flex;justify-content:space-between;align-items:flex-start;padding:12px 0;border-bottom:1px solid var(--border)">
             <div style="flex:1">
-              <strong>${post.title}</strong>
-              <div style="font-size:0.85rem;color:var(--text-secondary)">${date} ${imgCount > 0 ? `· ${imgCount} 张图片` : ""}</div>
-              <div style="font-size:0.85rem;margin-top:4px">${preview}</div>
+              <strong>${club.name}</strong>
+              <div style="font-size:0.85rem;color:var(--text-secondary)">${leaderInfo}</div>
+              <div style="font-size:0.85rem;margin-top:4px">${club.description ? (club.description.length > 50 ? club.description.substring(0, 50) + "..." : club.description) : ""}</div>
             </div>
             <div style="display:flex;gap:4px;margin-left:8px">
-              <button class="btn btn-sm btn-primary" onclick="showEditPost('${post.id}')">✎</button>
-              <button class="btn btn-sm btn-danger" onclick="deletePost('${post.id}')">&times;</button>
+              <button class="btn btn-sm btn-primary" onclick="showEditClub('${club.id}')">✎</button>
+              <button class="btn btn-sm btn-danger" onclick="deleteClub('${club.id}')">&times;</button>
             </div>
           </div>`;
         });
         html += `</div>`;
       }
-      html += `<button class="btn btn-primary mt-16" onclick="showCreatePost()" style="width:100%">+ 发布新动态</button>`;
+      html += `<button class="btn btn-primary mt-16" onclick="showCreateClub()" style="width:100%">+ 添加社团</button>`;
 
-      showModal("管理动态", html, null);
+      showModal("管理社团", html, null);
       document.getElementById("modal-save").style.display = "none";
     }
 
-    function showCreatePost() {
-      showModal("发布新动态", `
+    function showCreateClub() {
+      showModal("添加社团", `
         <div class="form-group">
-          <label>标题</label>
-          <input type="text" id="post-title" placeholder="动态标题">
+          <label>社团名称 *</label>
+          <input type="text" id="club-name" placeholder="社团名称">
         </div>
         <div class="form-group">
-          <label>内容</label>
-          <textarea id="post-content" rows="5" style="width:100%;resize:vertical;padding:8px;border:1px solid var(--border);border-radius:4px;font-family:inherit" placeholder="动态内容..."></textarea>
+          <label>社团简介</label>
+          <textarea id="club-description" rows="4" style="width:100%;resize:vertical;padding:8px;border:1px solid var(--border);border-radius:4px;font-family:inherit" placeholder="社团简介..."></textarea>
+        </div>
+        <hr style="margin:16px 0;border-color:var(--border)">
+        <h4 style="margin-bottom:12px">社长信息</h4>
+        <div class="form-group">
+          <label>社长姓名</label>
+          <input type="text" id="club-leader-name" placeholder="社长姓名">
         </div>
         <div class="form-group">
-          <label>图片</label>
-          <input type="file" id="post-images" multiple accept="image/*" onchange="previewPostImages()">
-          <div id="post-images-preview" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px"></div>
+          <label>社长介绍</label>
+          <textarea id="club-leader-intro" rows="3" style="width:100%;resize:vertical;padding:8px;border:1px solid var(--border);border-radius:4px;font-family:inherit" placeholder="社长介绍..."></textarea>
+        </div>
+        <div class="form-group">
+          <label>社长照片</label>
+          <input type="file" id="club-leader-photo" accept="image/*" onchange="previewClubImage('leader-photo')">
+          <div id="club-leader-photo-preview" style="margin-top:8px"></div>
+        </div>
+        <hr style="margin:16px 0;border-color:var(--border)">
+        <div class="form-group">
+          <label>微信群二维码</label>
+          <input type="file" id="club-qrcode" accept="image/*" onchange="previewClubImage('qrcode')">
+          <div id="club-qrcode-preview" style="margin-top:8px"></div>
         </div>
       `, async () => {
-        const title = document.getElementById("post-title").value.trim();
-        const content = document.getElementById("post-content").value.trim();
-        if (!title) return showToast("请输入标题", "error");
+        const name = document.getElementById("club-name").value.trim();
+        const description = document.getElementById("club-description").value.trim();
+        const leaderName = document.getElementById("club-leader-name").value.trim();
+        const leaderIntro = document.getElementById("club-leader-intro").value.trim();
 
-        // Upload images first
-        const imageUrls = await uploadPostImages();
+        if (!name) return showToast("请输入社团名称", "error");
+
+        // Upload images
+        const qrcodeUrl = await uploadClubImage("qrcode");
+        const leaderPhotoUrl = await uploadClubImage("leader-photo");
 
         try {
-          await apiCall("/api/admin/posts", {
+          await apiCall("/api/admin/clubs", {
             method: "POST",
-            body: JSON.stringify({ title, content, images: imageUrls })
+            body: JSON.stringify({
+              name, description,
+              qrcode: qrcodeUrl,
+              leader_name: leaderName,
+              leader_intro: leaderIntro,
+              leader_photo: leaderPhotoUrl
+            })
           });
-          showToast("发布成功");
+          showToast("添加成功");
           closeModal();
-          showPostsManager();
+          showClubsManager();
         } catch (e) {
           showToast(e.message, "error");
         }
@@ -898,56 +922,79 @@
       document.getElementById("modal-save").style.display = "";
     }
 
-    window.showEditPost = async function(postId) {
-      const post = postsData.find(p => p.id === postId);
-      if (!post) return;
+    window.showEditClub = async function(clubId) {
+      const club = clubsData.find(c => c.id === clubId);
+      if (!club) return;
 
-      const existingImages = (post.images || []).map(url =>
-        `<div style="position:relative;width:80px;height:80px">
-          <img src="${url}" style="width:100%;height:100%;object-fit:cover;border-radius:4px">
-          <button onclick="removeExistingImage(this,'${url}')" style="position:absolute;top:-6px;right:-6px;width:20px;height:20px;border-radius:50%;border:none;background:var(--danger);color:white;cursor:pointer;font-size:12px">&times;</button>
-        </div>`
-      ).join("");
+      const existingQrcode = club.qrcode ? `<div style="margin-bottom:8px"><img src="${club.qrcode}" style="max-width:150px;border-radius:4px"><button onclick="removeClubImage('qrcode','${club.qrcode}')" style="margin-left:8px" class="btn btn-sm btn-danger">删除</button></div>` : "";
+      const existingLeaderPhoto = club.leader_photo ? `<div style="margin-bottom:8px"><img src="${club.leader_photo}" style="max-width:100px;border-radius:50%"><button onclick="removeClubImage('leader-photo','${club.leader_photo}')" style="margin-left:8px" class="btn btn-sm btn-danger">删除</button></div>` : "";
 
-      showModal("编辑动态", `
+      showModal("编辑社团", `
         <div class="form-group">
-          <label>标题</label>
-          <input type="text" id="post-title" value="${post.title}">
+          <label>社团名称 *</label>
+          <input type="text" id="club-name" value="${club.name}" placeholder="社团名称">
         </div>
         <div class="form-group">
-          <label>内容</label>
-          <textarea id="post-content" rows="5" style="width:100%;resize:vertical;padding:8px;border:1px solid var(--border);border-radius:4px;font-family:inherit">${post.content}</textarea>
+          <label>社团简介</label>
+          <textarea id="club-description" rows="4" style="width:100%;resize:vertical;padding:8px;border:1px solid var(--border);border-radius:4px;font-family:inherit" placeholder="社团简介...">${club.description || ""}</textarea>
+        </div>
+        <hr style="margin:16px 0;border-color:var(--border)">
+        <h4 style="margin-bottom:12px">社长信息</h4>
+        <div class="form-group">
+          <label>社长姓名</label>
+          <input type="text" id="club-leader-name" value="${club.leader_name || ""}" placeholder="社长姓名">
         </div>
         <div class="form-group">
-          <label>现有图片</label>
-          <div id="existing-images" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px">${existingImages || '<span style="color:var(--text-secondary)">无</span>'}</div>
-          <input type="hidden" id="existing-image-urls" value='${JSON.stringify(post.images || [])}'>
+          <label>社长介绍</label>
+          <textarea id="club-leader-intro" rows="3" style="width:100%;resize:vertical;padding:8px;border:1px solid var(--border);border-radius:4px;font-family:inherit" placeholder="社长介绍...">${club.leader_intro || ""}</textarea>
         </div>
         <div class="form-group">
-          <label>添加新图片</label>
-          <input type="file" id="post-images" multiple accept="image/*" onchange="previewPostImages()">
-          <div id="post-images-preview" style="display:flex;flex-wrap:wrap;gap:8px;margin-top:8px"></div>
+          <label>社长照片</label>
+          <div id="existing-leader-photo">${existingLeaderPhoto}</div>
+          <input type="hidden" id="existing-leader-photo-url" value="${club.leader_photo || ""}">
+          <input type="file" id="club-leader-photo" accept="image/*" onchange="previewClubImage('leader-photo')">
+          <div id="club-leader-photo-preview" style="margin-top:8px"></div>
+        </div>
+        <hr style="margin:16px 0;border-color:var(--border)">
+        <div class="form-group">
+          <label>微信群二维码</label>
+          <div id="existing-qrcode">${existingQrcode}</div>
+          <input type="hidden" id="existing-qrcode-url" value="${club.qrcode || ""}">
+          <input type="file" id="club-qrcode" accept="image/*" onchange="previewClubImage('qrcode')">
+          <div id="club-qrcode-preview" style="margin-top:8px"></div>
         </div>
       `, async () => {
-        const title = document.getElementById("post-title").value.trim();
-        const content = document.getElementById("post-content").value.trim();
-        if (!title) return showToast("请输入标题", "error");
+        const name = document.getElementById("club-name").value.trim();
+        const description = document.getElementById("club-description").value.trim();
+        const leaderName = document.getElementById("club-leader-name").value.trim();
+        const leaderIntro = document.getElementById("club-leader-intro").value.trim();
 
-        // Get existing images (minus removed ones)
-        let imageUrls = JSON.parse(document.getElementById("existing-image-urls").value || "[]");
+        if (!name) return showToast("请输入社团名称", "error");
 
-        // Upload new images
-        const newUrls = await uploadPostImages();
-        imageUrls = imageUrls.concat(newUrls);
+        // Get existing URLs or upload new images
+        let qrcodeUrl = document.getElementById("existing-qrcode-url").value;
+        let leaderPhotoUrl = document.getElementById("existing-leader-photo-url").value;
+
+        const newQrcode = await uploadClubImage("qrcode");
+        const newLeaderPhoto = await uploadClubImage("leader-photo");
+
+        if (newQrcode) qrcodeUrl = newQrcode;
+        if (newLeaderPhoto) leaderPhotoUrl = newLeaderPhoto;
 
         try {
-          await apiCall(`/api/admin/posts/${postId}`, {
+          await apiCall(`/api/admin/clubs/${clubId}`, {
             method: "PUT",
-            body: JSON.stringify({ title, content, images: imageUrls })
+            body: JSON.stringify({
+              name, description,
+              qrcode: qrcodeUrl,
+              leader_name: leaderName,
+              leader_intro: leaderIntro,
+              leader_photo: leaderPhotoUrl
+            })
           });
           showToast("更新成功");
           closeModal();
-          showPostsManager();
+          showClubsManager();
         } catch (e) {
           showToast(e.message, "error");
         }
@@ -955,58 +1002,61 @@
       document.getElementById("modal-save").style.display = "";
     };
 
-    window.removeExistingImage = function(btn, url) {
-      const input = document.getElementById("existing-image-urls");
-      let urls = JSON.parse(input.value || "[]");
-      urls = urls.filter(u => u !== url);
-      input.value = JSON.stringify(urls);
-      btn.parentElement.remove();
+    window.removeClubImage = function(type, url) {
+      if (type === "qrcode") {
+        document.getElementById("existing-qrcode").innerHTML = "";
+        document.getElementById("existing-qrcode-url").value = "";
+      } else if (type === "leader-photo") {
+        document.getElementById("existing-leader-photo").innerHTML = "";
+        document.getElementById("existing-leader-photo-url").value = "";
+      }
     };
 
-    window.deletePost = async function(postId) {
-      if (!confirm("确定要删除这条动态吗？")) return;
+    window.deleteClub = async function(clubId) {
+      if (!confirm("确定要删除这个社团吗？")) return;
       try {
-        await apiCall(`/api/admin/posts/${postId}`, { method: "DELETE" });
+        await apiCall(`/api/admin/clubs/${clubId}`, { method: "DELETE" });
         showToast("已删除");
-        showPostsManager();
+        showClubsManager();
       } catch (e) {
         showToast(e.message, "error");
       }
     };
 
-    function previewPostImages() {
-      const input = document.getElementById("post-images");
-      const preview = document.getElementById("post-images-preview");
+    function previewClubImage(type) {
+      const input = document.getElementById(`club-${type}`);
+      const preview = document.getElementById(`club-${type}-preview`);
       preview.innerHTML = "";
-      Array.from(input.files).forEach((file, i) => {
+
+      if (input.files && input.files[0]) {
         const reader = new FileReader();
         reader.onload = (e) => {
-          preview.innerHTML += `<div style="position:relative;width:80px;height:80px">
-            <img src="${e.target.result}" style="width:100%;height:100%;object-fit:cover;border-radius:4px">
-          </div>`;
+          const maxWidth = type === "leader-photo" ? "100px" : "150px";
+          const style = type === "leader-photo" ? "border-radius:50%" : "border-radius:4px";
+          preview.innerHTML = `<img src="${e.target.result}" style="max-width:${maxWidth};${style}">`;
         };
-        reader.readAsDataURL(file);
-      });
+        reader.readAsDataURL(input.files[0]);
+      }
     }
 
-    async function uploadPostImages() {
-      const input = document.getElementById("post-images");
-      const urls = [];
-      for (const file of input.files) {
-        const formData = new FormData();
-        formData.append("file", file);
-        try {
-          const res = await fetch("/api/admin/upload", {
-            method: "POST",
-            body: formData
-          });
-          const data = await res.json();
-          if (data.url) urls.push(data.url);
-        } catch (e) {
-          console.error("Upload failed:", e);
-        }
+    async function uploadClubImage(type) {
+      const input = document.getElementById(`club-${type}`);
+      if (!input.files || !input.files[0]) return null;
+
+      const formData = new FormData();
+      formData.append("file", input.files[0]);
+
+      try {
+        const res = await fetch("/api/admin/upload", {
+          method: "POST",
+          body: formData
+        });
+        const data = await res.json();
+        return data.url || null;
+      } catch (e) {
+        console.error("Upload failed:", e);
+        return null;
       }
-      return urls;
     }
   </script>
 </body>

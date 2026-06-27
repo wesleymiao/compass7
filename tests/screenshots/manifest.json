@@ -1,5 +1,40 @@
 [
   {
+    "test": "Home page loads with tool cards",
+    "status": "passed",
+    "shots": [
+      {
+        "name": "00-home-page",
+        "file": "/workspace/group/compass7/tests/screenshots/00-home-page.png"
+      }
+    ]
+  },
+  {
+    "test": "Root redirects to home",
+    "status": "passed",
+    "shots": []
+  },
+  {
+    "test": "Home timetable link works",
+    "status": "passed",
+    "shots": [
+      {
+        "name": "00b-home-to-timetable",
+        "file": "/workspace/group/compass7/tests/screenshots/00b-home-to-timetable.png"
+      }
+    ]
+  },
+  {
+    "test": "Posts page loads",
+    "status": "passed",
+    "shots": [
+      {
+        "name": "00c-posts-page",
+        "file": "/workspace/group/compass7/tests/screenshots/00c-posts-page.png"
+      }
+    ]
+  },
+  {
     "test": "Cleanup previous [E2E] data",
     "status": "passed",
     "shots": []
@@ -110,7 +145,7 @@
     ]
   },
   {
-    "test": "P6-P10 labels displayed",
+    "test": "Unified period labels (no P6-P10)",
     "status": "passed",
     "shots": [
       {

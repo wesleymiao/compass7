@@ -329,46 +329,52 @@ def get_selections():
     return jsonify(sel)
 
 
-# ── Admin: Posts (Content Sharing) ────────────────────
+# ── Admin: Clubs (社团介绍) ────────────────────────────
 
-@app.route("/api/admin/posts", methods=["GET"])
+@app.route("/api/admin/clubs", methods=["GET"])
 @admin_required
-def admin_list_posts():
-    return jsonify(storage.get_posts())
+def admin_list_clubs():
+    return jsonify(storage.get_clubs())
 
 
-@app.route("/api/admin/posts", methods=["POST"])
+@app.route("/api/admin/clubs", methods=["POST"])
 @admin_required
-def admin_create_post():
+def admin_create_club():
     data = request.get_json()
-    title = data.get("title", "").strip()
-    content = data.get("content", "").strip()
-    images = data.get("images", [])
-    if not title:
-        return jsonify({"error": "Title required"}), 400
-    post = storage.create_post(title, content, images)
-    return jsonify(post), 201
+    name = data.get("name", "").strip()
+    description = data.get("description", "").strip()
+    qrcode = data.get("qrcode")
+    leader_name = data.get("leader_name", "").strip()
+    leader_intro = data.get("leader_intro", "").strip()
+    leader_photo = data.get("leader_photo")
+    if not name:
+        return jsonify({"error": "Club name required"}), 400
+    club = storage.create_club(name, description, qrcode, leader_name, leader_intro, leader_photo)
+    return jsonify(club), 201
 
 
-@app.route("/api/admin/posts/<post_id>", methods=["PUT"])
+@app.route("/api/admin/clubs/<club_id>", methods=["PUT"])
 @admin_required
-def admin_update_post(post_id):
+def admin_update_club(club_id):
     data = request.get_json()
-    post = storage.update_post(
-        post_id,
-        title=data.get("title"),
-        content=data.get("content"),
-        images=data.get("images")
+    club = storage.update_club(
+        club_id,
+        name=data.get("name"),
+        description=data.get("description"),
+        qrcode=data.get("qrcode"),
+        leader_name=data.get("leader_name"),
+        leader_intro=data.get("leader_intro"),
+        leader_photo=data.get("leader_photo")
     )
-    if not post:
-        return jsonify({"error": "Post not found"}), 404
-    return jsonify(post)
+    if not club:
+        return jsonify({"error": "Club not found"}), 404
+    return jsonify(club)
 
 
-@app.route("/api/admin/posts/<post_id>", methods=["DELETE"])
+@app.route("/api/admin/clubs/<club_id>", methods=["DELETE"])
 @admin_required
-def admin_delete_post(post_id):
-    storage.delete_post(post_id)
+def admin_delete_club(club_id):
+    storage.delete_club(club_id)
     return jsonify({"message": "Deleted"})
 
 
@@ -393,28 +399,28 @@ def admin_upload_image():
     return jsonify({"url": url})
 
 
-# ── Public: Posts ─────────────────────────────────────
+# ── Public: Clubs ─────────────────────────────────────
 
-@app.route("/api/posts", methods=["GET"])
-def public_list_posts():
-    """Get all posts for public viewing."""
-    return jsonify(storage.get_posts())
-
-
-@app.route("/api/posts/<post_id>", methods=["GET"])
-def public_get_post(post_id):
-    """Get a single post."""
-    post = storage.get_post(post_id)
-    if not post:
-        return jsonify({"error": "Post not found"}), 404
-    return jsonify(post)
+@app.route("/api/clubs", methods=["GET"])
+def public_list_clubs():
+    """Get all clubs for public viewing."""
+    return jsonify(storage.get_clubs())
 
 
-# ── Pages: Posts ──────────────────────────────────────
+@app.route("/api/clubs/<club_id>", methods=["GET"])
+def public_get_club(club_id):
+    """Get a single club."""
+    club = storage.get_club(club_id)
+    if not club:
+        return jsonify({"error": "Club not found"}), 404
+    return jsonify(club)
 
-@app.route("/posts")
-def posts_page():
-    return send_from_directory("templates", "posts.html")
+
+# ── Pages: Clubs ──────────────────────────────────────
+
+@app.route("/clubs")
+def clubs_page():
+    return send_from_directory("templates", "clubs.html")
 
 
 # ── Test Reset (only in testing mode) ─────────────────
