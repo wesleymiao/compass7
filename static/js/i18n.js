@@ -246,3 +246,20 @@ function setLang(lang) {
 function toggleLang() {
   setLang(currentLang === "zh" ? "en" : "zh");
 }
+
+// Expose i18n object for pages to extend translations
+const i18n = I18N;
+
+function applyI18n() {
+  document.querySelectorAll("[data-i18n]").forEach(el => {
+    el.textContent = t(el.dataset.i18n);
+  });
+  document.querySelectorAll("[data-i18n-placeholder]").forEach(el => {
+    el.placeholder = t(el.dataset.i18nPlaceholder);
+  });
+}
+
+// Apply translations on page load
+document.addEventListener("DOMContentLoaded", () => {
+  applyI18n();
+});
