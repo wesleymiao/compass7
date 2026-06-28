@@ -59,8 +59,15 @@
     .club-name {
       font-size: 1.3rem;
       font-weight: 600;
-      margin-bottom: 12px;
+      margin-bottom: 8px;
       color: var(--text);
+    }
+
+    .club-slogan {
+      color: var(--primary);
+      font-size: 0.9rem;
+      font-style: italic;
+      margin-bottom: 12px;
     }
 
     .club-description {
@@ -73,35 +80,35 @@
       overflow: hidden;
     }
 
-    .club-leader-preview {
+    .club-poster-preview {
+      width: 100%;
+      height: 150px;
+      object-fit: cover;
+      border-radius: var(--radius-sm);
+      margin-bottom: 12px;
+    }
+
+    .club-leaders-preview {
       display: flex;
-      align-items: center;
-      gap: 10px;
+      flex-wrap: wrap;
+      gap: 8px;
       margin-top: 16px;
       padding-top: 16px;
       border-top: 1px solid var(--border);
     }
 
-    .club-leader-photo-small {
-      width: 40px;
-      height: 40px;
-      border-radius: 50%;
-      object-fit: cover;
+    .club-leader-tag {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 4px 10px;
       background: var(--bg-secondary);
+      border-radius: 20px;
+      font-size: 0.85rem;
     }
 
-    .club-leader-info-small {
-      flex: 1;
-    }
-
-    .club-leader-name-small {
-      font-weight: 500;
-      font-size: 0.9rem;
-    }
-
-    .club-leader-title {
-      font-size: 0.8rem;
-      color: var(--text-secondary);
+    .club-leader-tag::before {
+      content: "👤";
     }
 
     .empty-state {
@@ -183,8 +190,24 @@
     .club-modal-name {
       font-size: 1.8rem;
       font-weight: 700;
-      margin-bottom: 16px;
+      margin-bottom: 8px;
       padding-right: 40px;
+    }
+
+    .club-modal-slogan {
+      color: var(--primary);
+      font-size: 1.1rem;
+      font-style: italic;
+      margin-bottom: 16px;
+    }
+
+    .club-modal-poster {
+      width: 100%;
+      max-height: 300px;
+      object-fit: contain;
+      border-radius: var(--radius-sm);
+      margin-bottom: 20px;
+      background: var(--bg-secondary);
     }
 
     .club-modal-description {
@@ -204,31 +227,31 @@
       color: var(--primary);
     }
 
+    .club-leaders-list {
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
     .club-leader-card {
       display: flex;
       gap: 16px;
       background: var(--bg-secondary);
       padding: 16px;
       border-radius: var(--radius-sm);
+      align-items: center;
     }
 
-    .club-leader-photo {
-      width: 80px;
-      height: 80px;
+    .club-leader-icon {
+      width: 48px;
+      height: 48px;
       border-radius: 50%;
-      object-fit: cover;
-      flex-shrink: 0;
-    }
-
-    .club-leader-photo-placeholder {
-      width: 80px;
-      height: 80px;
-      border-radius: 50%;
-      background: var(--border);
+      background: var(--primary);
+      color: white;
       display: flex;
       align-items: center;
       justify-content: center;
-      font-size: 2rem;
+      font-size: 1.5rem;
       flex-shrink: 0;
     }
 
@@ -237,15 +260,14 @@
     }
 
     .club-leader-name {
-      font-size: 1.1rem;
+      font-size: 1rem;
       font-weight: 600;
-      margin-bottom: 8px;
+      margin-bottom: 4px;
     }
 
-    .club-leader-intro {
+    .club-leader-contact {
       font-size: 0.9rem;
       color: var(--text-secondary);
-      line-height: 1.6;
     }
 
     .club-qrcode {
@@ -373,27 +395,32 @@
       }
 
       container.innerHTML = clubs.map((club, idx) => {
-        let leaderHtml = '';
-        if (club.leader_name) {
-          const photoHtml = club.leader_photo
-            ? `<img src="${club.leader_photo}" class="club-leader-photo-small" alt="">`
-            : `<div class="club-leader-photo-small" style="background:var(--bg-secondary);display:flex;align-items:center;justify-content:center;font-size:1.2rem">&#128100;</div>`;
-          leaderHtml = `
-            <div class="club-leader-preview">
-              ${photoHtml}
-              <div class="club-leader-info-small">
-                <div class="club-leader-name-small">${escapeHtml(club.leader_name)}</div>
-                <div class="club-leader-title" data-i18n="leader">${t ? t("leader") : "社长"}</div>
-              </div>
-            </div>
-          `;
+        // Poster preview
+        let posterHtml = '';
+        if (club.poster) {
+          posterHtml = `<img src="${club.poster}" class="club-poster-preview" alt="">`;
+        }
+
+        // Slogan
+        let sloganHtml = '';
+        if (club.slogan) {
+          sloganHtml = `<div class="club-slogan">${escapeHtml(club.slogan)}</div>`;
+        }
+
+        // Leaders tags
+        let leadersHtml = '';
+        if (club.leaders && club.leaders.length > 0) {
+          const tags = club.leaders.map(l => `<span class="club-leader-tag">${escapeHtml(l.name)}</span>`).join('');
+          leadersHtml = `<div class="club-leaders-preview">${tags}</div>`;
         }
 
         return `
           <div class="club-card" onclick="showClubDetail('${club.id}')">
+            ${posterHtml}
             <div class="club-name">${escapeHtml(club.name)}</div>
+            ${sloganHtml}
             <div class="club-description">${escapeHtml(club.description || '')}</div>
-            ${leaderHtml}
+            ${leadersHtml}
           </div>
         `;
       }).join("");
@@ -403,25 +430,41 @@
       const club = clubsData.find(c => c.id === clubId);
       if (!club) return;
 
-      let leaderHtml = '';
-      if (club.leader_name) {
-        const photoHtml = club.leader_photo
-          ? `<img src="${club.leader_photo}" class="club-leader-photo" alt="">`
-          : `<div class="club-leader-photo-placeholder">&#128100;</div>`;
-        leaderHtml = `
+      // Slogan
+      let sloganHtml = '';
+      if (club.slogan) {
+        sloganHtml = `<div class="club-modal-slogan">${escapeHtml(club.slogan)}</div>`;
+      }
+
+      // Poster
+      let posterHtml = '';
+      if (club.poster) {
+        posterHtml = `<img src="${club.poster}" class="club-modal-poster" alt="">`;
+      }
+
+      // Leaders section
+      let leadersHtml = '';
+      if (club.leaders && club.leaders.length > 0) {
+        const leaderCards = club.leaders.map(leader => `
+          <div class="club-leader-card">
+            <div class="club-leader-icon">&#128100;</div>
+            <div class="club-leader-details">
+              <div class="club-leader-name">${escapeHtml(leader.name)}</div>
+              <div class="club-leader-contact">${escapeHtml(leader.contact || '')}</div>
+            </div>
+          </div>
+        `).join('');
+        leadersHtml = `
           <div class="club-section">
             <div class="club-section-title" data-i18n="leader_intro">${t ? t("leader_intro") : "社长介绍"}</div>
-            <div class="club-leader-card">
-              ${photoHtml}
-              <div class="club-leader-details">
-                <div class="club-leader-name">${escapeHtml(club.leader_name)}</div>
-                <div class="club-leader-intro">${escapeHtml(club.leader_intro || '')}</div>
-              </div>
+            <div class="club-leaders-list">
+              ${leaderCards}
             </div>
           </div>
         `;
       }
 
+      // QR Code section
       let qrcodeHtml = '';
       if (club.qrcode) {
         qrcodeHtml = `
@@ -437,8 +480,10 @@
 
       document.getElementById("club-modal-content").innerHTML = `
         <div class="club-modal-name">${escapeHtml(club.name)}</div>
+        ${sloganHtml}
+        ${posterHtml}
         <div class="club-modal-description">${escapeHtml(club.description || '')}</div>
-        ${leaderHtml}
+        ${leadersHtml}
         ${qrcodeHtml}
       `;
 

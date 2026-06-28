@@ -323,6 +323,9 @@ def get_clubs():
     for club in data["clubs"]:
         if club.get("qrcode"):
             club["qrcode"] = _ensure_sas_url(club["qrcode"])
+        if club.get("poster"):
+            club["poster"] = _ensure_sas_url(club["poster"])
+        # Legacy field migration
         if club.get("leader_photo"):
             club["leader_photo"] = _ensure_sas_url(club["leader_photo"])
     return data
@@ -372,18 +375,27 @@ def save_clubs(data):
     _write_blob("clubs.json", data)
 
 
-def create_club(name: str, description: str, qrcode: str = None,
-                leader_name: str = "", leader_intro: str = "", leader_photo: str = None):
-    """Create a new club with name, description, qrcode, and leader info."""
+def create_club(name: str, description: str = "", slogan: str = "",
+                poster: str = None, qrcode: str = None, leaders: list = None):
+    """Create a new club.
+
+    Args:
+        name: 社团名称
+        description: 社团简介
+        slogan: 社团宣传语
+        poster: 社团海报 URL
+        qrcode: 招新群二维码 URL
+        leaders: 社长列表 [{"name": "xxx", "contact": "xxx"}, ...]
+    """
     data = get_clubs()
     club = {
         "id": gen_id(),
         "name": name,
         "description": description,
-        "qrcode": qrcode,  # WeChat group QR code image URL
-        "leader_name": leader_name,
-        "leader_intro": leader_intro,
-        "leader_photo": leader_photo,
+        "slogan": slogan,
+        "poster": poster,
+        "qrcode": qrcode,
+        "leaders": leaders or [],
         "created_at": datetime.now(timezone.utc).isoformat(),
         "updated_at": datetime.now(timezone.utc).isoformat()
     }
@@ -393,8 +405,8 @@ def create_club(name: str, description: str, qrcode: str = None,
 
 
 def update_club(club_id: str, name: str = None, description: str = None,
-                qrcode: str = None, leader_name: str = None,
-                leader_intro: str = None, leader_photo: str = None):
+                slogan: str = None, poster: str = None, qrcode: str = None,
+                leaders: list = None):
     """Update an existing club."""
     data = get_clubs()
     for club in data["clubs"]:
@@ -403,14 +415,14 @@ def update_club(club_id: str, name: str = None, description: str = None,
                 club["name"] = name
             if description is not None:
                 club["description"] = description
+            if slogan is not None:
+                club["slogan"] = slogan
+            if poster is not None:
+                club["poster"] = poster
             if qrcode is not None:
                 club["qrcode"] = qrcode
-            if leader_name is not None:
-                club["leader_name"] = leader_name
-            if leader_intro is not None:
-                club["leader_intro"] = leader_intro
-            if leader_photo is not None:
-                club["leader_photo"] = leader_photo
+            if leaders is not None:
+                club["leaders"] = leaders
             club["updated_at"] = datetime.now(timezone.utc).isoformat()
             save_clubs(data)
             return club

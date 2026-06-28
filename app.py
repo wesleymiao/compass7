@@ -343,13 +343,13 @@ def admin_create_club():
     data = request.get_json()
     name = data.get("name", "").strip()
     description = data.get("description", "").strip()
+    slogan = data.get("slogan", "").strip()
+    poster = data.get("poster")
     qrcode = data.get("qrcode")
-    leader_name = data.get("leader_name", "").strip()
-    leader_intro = data.get("leader_intro", "").strip()
-    leader_photo = data.get("leader_photo")
+    leaders = data.get("leaders", [])
     if not name:
         return jsonify({"error": "Club name required"}), 400
-    club = storage.create_club(name, description, qrcode, leader_name, leader_intro, leader_photo)
+    club = storage.create_club(name, description, slogan, poster, qrcode, leaders)
     return jsonify(club), 201
 
 
@@ -361,10 +361,10 @@ def admin_update_club(club_id):
         club_id,
         name=data.get("name"),
         description=data.get("description"),
+        slogan=data.get("slogan"),
+        poster=data.get("poster"),
         qrcode=data.get("qrcode"),
-        leader_name=data.get("leader_name"),
-        leader_intro=data.get("leader_intro"),
-        leader_photo=data.get("leader_photo")
+        leaders=data.get("leaders")
     )
     if not club:
         return jsonify({"error": "Club not found"}), 404

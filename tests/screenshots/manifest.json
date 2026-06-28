@@ -25,12 +25,12 @@
     ]
   },
   {
-    "test": "Posts page loads",
+    "test": "Clubs page loads",
     "status": "passed",
     "shots": [
       {
-        "name": "00c-posts-page",
-        "file": "/workspace/group/compass7/tests/screenshots/00c-posts-page.png"
+        "name": "00c-clubs-page",
+        "file": "/workspace/group/compass7/tests/screenshots/00c-clubs-page.png"
       }
     ]
   },

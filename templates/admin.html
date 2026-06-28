@@ -837,12 +837,13 @@
       } else {
         html = `<div style="max-height:400px;overflow-y:auto">`;
         clubsData.forEach((club, i) => {
-          const leaderInfo = club.leader_name ? ` · 社长: ${club.leader_name}` : "";
+          const leaders = (club.leaders || []).map(l => l.name).join("、");
+          const leaderInfo = leaders ? ` · 社长: ${leaders}` : "";
           html += `<div style="display:flex;justify-content:space-between;align-items:flex-start;padding:12px 0;border-bottom:1px solid var(--border)">
             <div style="flex:1">
-              <strong>${club.name}</strong>
+              <strong>${escapeHtml(club.name)}</strong>
               <div style="font-size:0.85rem;color:var(--text-secondary)">${leaderInfo}</div>
-              <div style="font-size:0.85rem;margin-top:4px">${club.description ? (club.description.length > 50 ? club.description.substring(0, 50) + "..." : club.description) : ""}</div>
+              <div style="font-size:0.85rem;margin-top:4px;color:var(--primary)">${escapeHtml(club.slogan || "")}</div>
             </div>
             <div style="display:flex;gap:4px;margin-left:8px">
               <button class="btn btn-sm btn-primary" onclick="showEditClub('${club.id}')">✎</button>
@@ -858,6 +859,61 @@
       document.getElementById("modal-save").style.display = "none";
     }
 
+    function escapeHtml(text) {
+      if (!text) return "";
+      const div = document.createElement("div");
+      div.textContent = text;
+      return div.innerHTML;
+    }
+
+    function buildLeadersHtml(leaders) {
+      leaders = leaders || [];
+      let html = `<div id="leaders-container">`;
+      leaders.forEach((leader, idx) => {
+        html += `<div class="leader-row" style="display:flex;gap:8px;margin-bottom:8px;padding:8px;background:var(--bg-secondary);border-radius:4px">
+          <input type="text" class="leader-name" value="${escapeHtml(leader.name || "")}" placeholder="姓名" style="flex:1">
+          <input type="text" class="leader-contact" value="${escapeHtml(leader.contact || "")}" placeholder="联系方式" style="flex:1">
+          <button type="button" class="btn btn-sm btn-danger" onclick="this.parentElement.remove()">×</button>
+        </div>`;
+      });
+      if (!leaders.length) {
+        html += `<div class="leader-row" style="display:flex;gap:8px;margin-bottom:8px;padding:8px;background:var(--bg-secondary);border-radius:4px">
+          <input type="text" class="leader-name" placeholder="姓名" style="flex:1">
+          <input type="text" class="leader-contact" placeholder="联系方式" style="flex:1">
+          <button type="button" class="btn btn-sm btn-danger" onclick="this.parentElement.remove()">×</button>
+        </div>`;
+      }
+      html += `</div>
+        <button type="button" class="btn btn-sm btn-secondary" onclick="addLeaderRow()" style="margin-top:4px">+ 添加社长</button>`;
+      return html;
+    }
+
+    window.addLeaderRow = function() {
+      const container = document.getElementById("leaders-container");
+      const row = document.createElement("div");
+      row.className = "leader-row";
+      row.style = "display:flex;gap:8px;margin-bottom:8px;padding:8px;background:var(--bg-secondary);border-radius:4px";
+      row.innerHTML = `
+        <input type="text" class="leader-name" placeholder="姓名" style="flex:1">
+        <input type="text" class="leader-contact" placeholder="联系方式" style="flex:1">
+        <button type="button" class="btn btn-sm btn-danger" onclick="this.parentElement.remove()">×</button>
+      `;
+      container.appendChild(row);
+    };
+
+    function getLeadersFromForm() {
+      const rows = document.querySelectorAll("#leaders-container .leader-row");
+      const leaders = [];
+      rows.forEach(row => {
+        const name = row.querySelector(".leader-name").value.trim();
+        const contact = row.querySelector(".leader-contact").value.trim();
+        if (name) {
+          leaders.push({ name, contact });
+        }
+      });
+      return leaders;
+    }
+
     function showCreateClub() {
       showModal("添加社团", `
         <div class="form-group">
@@ -866,50 +922,46 @@
         </div>
         <div class="form-group">
           <label>社团简介</label>
-          <textarea id="club-description" rows="4" style="width:100%;resize:vertical;padding:8px;border:1px solid var(--border);border-radius:4px;font-family:inherit" placeholder="社团简介..."></textarea>
-        </div>
-        <hr style="margin:16px 0;border-color:var(--border)">
-        <h4 style="margin-bottom:12px">社长信息</h4>
-        <div class="form-group">
-          <label>社长姓名</label>
-          <input type="text" id="club-leader-name" placeholder="社长姓名">
+          <textarea id="club-description" rows="3" style="width:100%;resize:vertical;padding:8px;border:1px solid var(--border);border-radius:4px;font-family:inherit" placeholder="社团简介..."></textarea>
         </div>
         <div class="form-group">
-          <label>社长介绍</label>
-          <textarea id="club-leader-intro" rows="3" style="width:100%;resize:vertical;padding:8px;border:1px solid var(--border);border-radius:4px;font-family:inherit" placeholder="社长介绍..."></textarea>
-        </div>
-        <div class="form-group">
-          <label>社长照片</label>
-          <input type="file" id="club-leader-photo" accept="image/*" onchange="previewClubImage('leader-photo')">
-          <div id="club-leader-photo-preview" style="margin-top:8px"></div>
+          <label>社团宣传语</label>
+          <input type="text" id="club-slogan" placeholder="一句话介绍社团">
         </div>
         <hr style="margin:16px 0;border-color:var(--border)">
         <div class="form-group">
-          <label>微信群二维码</label>
+          <label>社团海报</label>
+          <input type="file" id="club-poster" accept="image/*" onchange="previewClubImage('poster')">
+          <div id="club-poster-preview" style="margin-top:8px"></div>
+        </div>
+        <div class="form-group">
+          <label>招新群二维码</label>
           <input type="file" id="club-qrcode" accept="image/*" onchange="previewClubImage('qrcode')">
           <div id="club-qrcode-preview" style="margin-top:8px"></div>
         </div>
+        <hr style="margin:16px 0;border-color:var(--border)">
+        <h4 style="margin-bottom:12px">社长信息</h4>
+        ${buildLeadersHtml([])}
       `, async () => {
         const name = document.getElementById("club-name").value.trim();
         const description = document.getElementById("club-description").value.trim();
-        const leaderName = document.getElementById("club-leader-name").value.trim();
-        const leaderIntro = document.getElementById("club-leader-intro").value.trim();
+        const slogan = document.getElementById("club-slogan").value.trim();
 
         if (!name) return showToast("请输入社团名称", "error");
 
         // Upload images
+        const posterUrl = await uploadClubImage("poster");
         const qrcodeUrl = await uploadClubImage("qrcode");
-        const leaderPhotoUrl = await uploadClubImage("leader-photo");
+        const leaders = getLeadersFromForm();
 
         try {
           await apiCall("/api/admin/clubs", {
             method: "POST",
             body: JSON.stringify({
-              name, description,
+              name, description, slogan,
+              poster: posterUrl,
               qrcode: qrcodeUrl,
-              leader_name: leaderName,
-              leader_intro: leaderIntro,
-              leader_photo: leaderPhotoUrl
+              leaders: leaders
             })
           });
           showToast("添加成功");
@@ -926,70 +978,67 @@
       const club = clubsData.find(c => c.id === clubId);
       if (!club) return;
 
-      const existingQrcode = club.qrcode ? `<div style="margin-bottom:8px"><img src="${club.qrcode}" style="max-width:150px;border-radius:4px"><button onclick="removeClubImage('qrcode','${club.qrcode}')" style="margin-left:8px" class="btn btn-sm btn-danger">删除</button></div>` : "";
-      const existingLeaderPhoto = club.leader_photo ? `<div style="margin-bottom:8px"><img src="${club.leader_photo}" style="max-width:100px;border-radius:50%"><button onclick="removeClubImage('leader-photo','${club.leader_photo}')" style="margin-left:8px" class="btn btn-sm btn-danger">删除</button></div>` : "";
+      const existingPoster = club.poster ? `<div id="existing-poster-container" style="margin-bottom:8px"><img src="${club.poster}" style="max-width:200px;border-radius:4px"><button onclick="removeClubImage('poster')" style="margin-left:8px" class="btn btn-sm btn-danger">删除</button></div>` : "";
+      const existingQrcode = club.qrcode ? `<div id="existing-qrcode-container" style="margin-bottom:8px"><img src="${club.qrcode}" style="max-width:150px;border-radius:4px"><button onclick="removeClubImage('qrcode')" style="margin-left:8px" class="btn btn-sm btn-danger">删除</button></div>` : "";
 
       showModal("编辑社团", `
         <div class="form-group">
           <label>社团名称 *</label>
-          <input type="text" id="club-name" value="${club.name}" placeholder="社团名称">
+          <input type="text" id="club-name" value="${escapeHtml(club.name)}" placeholder="社团名称">
         </div>
         <div class="form-group">
           <label>社团简介</label>
-          <textarea id="club-description" rows="4" style="width:100%;resize:vertical;padding:8px;border:1px solid var(--border);border-radius:4px;font-family:inherit" placeholder="社团简介...">${club.description || ""}</textarea>
-        </div>
-        <hr style="margin:16px 0;border-color:var(--border)">
-        <h4 style="margin-bottom:12px">社长信息</h4>
-        <div class="form-group">
-          <label>社长姓名</label>
-          <input type="text" id="club-leader-name" value="${club.leader_name || ""}" placeholder="社长姓名">
+          <textarea id="club-description" rows="3" style="width:100%;resize:vertical;padding:8px;border:1px solid var(--border);border-radius:4px;font-family:inherit" placeholder="社团简介...">${escapeHtml(club.description || "")}</textarea>
         </div>
         <div class="form-group">
-          <label>社长介绍</label>
-          <textarea id="club-leader-intro" rows="3" style="width:100%;resize:vertical;padding:8px;border:1px solid var(--border);border-radius:4px;font-family:inherit" placeholder="社长介绍...">${club.leader_intro || ""}</textarea>
-        </div>
-        <div class="form-group">
-          <label>社长照片</label>
-          <div id="existing-leader-photo">${existingLeaderPhoto}</div>
-          <input type="hidden" id="existing-leader-photo-url" value="${club.leader_photo || ""}">
-          <input type="file" id="club-leader-photo" accept="image/*" onchange="previewClubImage('leader-photo')">
-          <div id="club-leader-photo-preview" style="margin-top:8px"></div>
+          <label>社团宣传语</label>
+          <input type="text" id="club-slogan" value="${escapeHtml(club.slogan || "")}" placeholder="一句话介绍社团">
         </div>
         <hr style="margin:16px 0;border-color:var(--border)">
         <div class="form-group">
-          <label>微信群二维码</label>
-          <div id="existing-qrcode">${existingQrcode}</div>
+          <label>社团海报</label>
+          ${existingPoster}
+          <input type="hidden" id="existing-poster-url" value="${club.poster || ""}">
+          <input type="file" id="club-poster" accept="image/*" onchange="previewClubImage('poster')">
+          <div id="club-poster-preview" style="margin-top:8px"></div>
+        </div>
+        <div class="form-group">
+          <label>招新群二维码</label>
+          ${existingQrcode}
           <input type="hidden" id="existing-qrcode-url" value="${club.qrcode || ""}">
           <input type="file" id="club-qrcode" accept="image/*" onchange="previewClubImage('qrcode')">
           <div id="club-qrcode-preview" style="margin-top:8px"></div>
         </div>
+        <hr style="margin:16px 0;border-color:var(--border)">
+        <h4 style="margin-bottom:12px">社长信息</h4>
+        ${buildLeadersHtml(club.leaders)}
       `, async () => {
         const name = document.getElementById("club-name").value.trim();
         const description = document.getElementById("club-description").value.trim();
-        const leaderName = document.getElementById("club-leader-name").value.trim();
-        const leaderIntro = document.getElementById("club-leader-intro").value.trim();
+        const slogan = document.getElementById("club-slogan").value.trim();
 
         if (!name) return showToast("请输入社团名称", "error");
 
         // Get existing URLs or upload new images
+        let posterUrl = document.getElementById("existing-poster-url").value;
         let qrcodeUrl = document.getElementById("existing-qrcode-url").value;
-        let leaderPhotoUrl = document.getElementById("existing-leader-photo-url").value;
 
+        const newPoster = await uploadClubImage("poster");
         const newQrcode = await uploadClubImage("qrcode");
-        const newLeaderPhoto = await uploadClubImage("leader-photo");
 
+        if (newPoster) posterUrl = newPoster;
         if (newQrcode) qrcodeUrl = newQrcode;
-        if (newLeaderPhoto) leaderPhotoUrl = newLeaderPhoto;
+
+        const leaders = getLeadersFromForm();
 
         try {
           await apiCall(`/api/admin/clubs/${clubId}`, {
             method: "PUT",
             body: JSON.stringify({
-              name, description,
+              name, description, slogan,
+              poster: posterUrl,
               qrcode: qrcodeUrl,
-              leader_name: leaderName,
-              leader_intro: leaderIntro,
-              leader_photo: leaderPhotoUrl
+              leaders: leaders
             })
           });
           showToast("更新成功");
@@ -1002,14 +1051,10 @@
       document.getElementById("modal-save").style.display = "";
     };
 
-    window.removeClubImage = function(type, url) {
-      if (type === "qrcode") {
-        document.getElementById("existing-qrcode").innerHTML = "";
-        document.getElementById("existing-qrcode-url").value = "";
-      } else if (type === "leader-photo") {
-        document.getElementById("existing-leader-photo").innerHTML = "";
-        document.getElementById("existing-leader-photo-url").value = "";
-      }
+    window.removeClubImage = function(type) {
+      const container = document.getElementById(`existing-${type}-container`);
+      if (container) container.remove();
+      document.getElementById(`existing-${type}-url`).value = "";
     };
 
     window.deleteClub = async function(clubId) {
@@ -1031,9 +1076,8 @@
       if (input.files && input.files[0]) {
         const reader = new FileReader();
         reader.onload = (e) => {
-          const maxWidth = type === "leader-photo" ? "100px" : "150px";
-          const style = type === "leader-photo" ? "border-radius:50%" : "border-radius:4px";
-          preview.innerHTML = `<img src="${e.target.result}" style="max-width:${maxWidth};${style}">`;
+          const maxWidth = type === "poster" ? "200px" : "150px";
+          preview.innerHTML = `<img src="${e.target.result}" style="max-width:${maxWidth};border-radius:4px">`;
         };
         reader.readAsDataURL(input.files[0]);
       }
@@ -1041,7 +1085,7 @@
 
     async function uploadClubImage(type) {
       const input = document.getElementById(`club-${type}`);
-      if (!input.files || !input.files[0]) return null;
+      if (!input || !input.files || !input.files[0]) return null;
 
       const formData = new FormData();
       formData.append("file", input.files[0]);
