@@ -471,6 +471,69 @@ async function addCourseAtSlot(page, day, period, nameCn, nameEn, teacher, room)
     await page.close();
   });
 
+  await test('Club search filters results', async () => {
+    const page = await browser.newPage();
+    await adminLogin(page);
+
+    // Create two distinguishable clubs
+    const ids = await page.evaluate(async () => {
+      const mk = async (name, desc) => {
+        const res = await fetch('/api/admin/clubs', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ name, description: desc })
+        });
+        return (await res.json()).id;
+      };
+      return {
+        a: await mk('[E2E] Robotics Club', 'We build robots'),
+        b: await mk('[E2E] Painting Club', 'We make art')
+      };
+    });
+    assert(ids.a && ids.b, 'Failed to create search test clubs');
+
+    try {
+      await page.goto(`${BASE}/clubs`);
+      await page.waitForSelector('#club-search', { timeout: 10000 });
+      await page.waitForSelector('.club-card', { timeout: 10000 });
+
+      // Search by unique name -> only Robotics matches
+      await page.fill('#club-search', 'Robotics');
+      await page.waitForTimeout(400);
+      let robotics = await page.locator('.club-card').filter({ hasText: '[E2E] Robotics Club' }).count();
+      let painting = await page.locator('.club-card').filter({ hasText: '[E2E] Painting Club' }).count();
+      assert(robotics === 1, 'Robotics club should be visible when searching "Robotics"');
+      assert(painting === 0, 'Painting club should be hidden when searching "Robotics"');
+
+      // Search by description term -> only Painting matches
+      await page.fill('#club-search', 'art');
+      await page.waitForTimeout(400);
+      painting = await page.locator('.club-card').filter({ hasText: '[E2E] Painting Club' }).count();
+      assert(painting === 1, 'Painting club should match description search "art"');
+
+      // No match -> no-results state shown
+      await page.fill('#club-search', 'zzzznomatch');
+      await page.waitForTimeout(400);
+      const noResultsVisible = await page.locator('#no-results').isVisible();
+      assert(noResultsVisible, 'No-results message should show when nothing matches');
+
+      await shot(page, '00e-clubs-search');
+
+      // Clear search -> both clubs visible again
+      await page.click('#search-clear');
+      await page.waitForTimeout(400);
+      const allVisible = await page.locator('.club-card').count();
+      assert(allVisible >= 2, 'All clubs should be visible after clearing search');
+    } finally {
+      await page.evaluate(async (ids) => {
+        await fetch(`/api/admin/clubs/${ids.a}`, { method: 'DELETE' });
+        await fetch(`/api/admin/clubs/${ids.b}`, { method: 'DELETE' });
+      }, ids);
+    }
+
+    await page.close();
+  });
+
   // ═══════════════════════════════════════════════
   // CLEANUP FROM PREVIOUS RUN (at start, not end)
   // ═══════════════════════════════════════════════
