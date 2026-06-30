@@ -355,13 +355,17 @@ async function addCourseAtSlot(page, day, period, nameCn, nameEn, teacher, room)
     const timetableCard = await page.locator('.tool-card[href="/timetable"]');
     assert(await timetableCard.count() > 0, 'Timetable card not found');
 
+    // Timetable should show a "testing" badge
+    const testingBadge = await page.locator('.tool-card[href="/timetable"] .tool-badge.testing').count();
+    assert(testingBadge > 0, 'Timetable testing badge not found');
+
     // Check clubs card exists and is clickable
     const clubsCard = await page.locator('.tool-card[href="/clubs"]');
     assert(await clubsCard.count() > 0, 'Clubs card not found');
 
     // Check disabled (coming soon) cards exist
     const disabledCards = await page.locator('.tool-card.disabled').count();
-    assert(disabledCards >= 2, `Expected at least 2 disabled cards, got ${disabledCards}`);
+    assert(disabledCards >= 1, `Expected at least 1 disabled card, got ${disabledCards}`);
 
     await shot(page, '00-home-page');
     await page.close();
