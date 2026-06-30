@@ -35,6 +35,26 @@
     ]
   },
   {
+    "test": "Club image lightbox (view large image)",
+    "status": "passed",
+    "shots": [
+      {
+        "name": "00d-clubs-lightbox",
+        "file": "/workspace/group/compass7/tests/screenshots/00d-clubs-lightbox.png"
+      }
+    ]
+  },
+  {
+    "test": "Club search filters results",
+    "status": "passed",
+    "shots": [
+      {
+        "name": "00e-clubs-search",
+        "file": "/workspace/group/compass7/tests/screenshots/00e-clubs-search.png"
+      }
+    ]
+  },
+  {
     "test": "Cleanup previous [E2E] data",
     "status": "passed",
     "shots": []
