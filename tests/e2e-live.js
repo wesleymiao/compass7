@@ -409,6 +409,68 @@ async function addCourseAtSlot(page, day, period, nameCn, nameEn, teacher, room)
     await page.close();
   });
 
+  await test('Club image lightbox (view large image)', async () => {
+    const page = await browser.newPage();
+    // Login as admin so we can create a club via the API in page context
+    await adminLogin(page);
+
+    // A tiny inline poster image (red 1x1 PNG) used as the club poster
+    const POSTER = 'data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAAC0lEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==';
+
+    // Create a test club with a poster + qrcode
+    const created = await page.evaluate(async (poster) => {
+      const res = await fetch('/api/admin/clubs', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          name: '[E2E] Lightbox Club',
+          description: 'E2E lightbox test',
+          poster: poster,
+          qrcode: poster
+        })
+      });
+      return res.json();
+    }, POSTER);
+    assert(created && created.id, 'Failed to create test club');
+
+    try {
+      // Visit clubs page and open the club detail
+      await page.goto(`${BASE}/clubs`);
+      await page.waitForSelector('.club-card', { timeout: 10000 });
+      await page.locator('.club-card').filter({ hasText: '[E2E] Lightbox Club' }).first().click();
+      await page.waitForSelector('#club-modal.active', { timeout: 5000 });
+
+      // Poster inside modal should be zoomable
+      const zoomPoster = page.locator('.club-modal-poster.zoomable');
+      assert(await zoomPoster.count() > 0, 'Zoomable poster not found in modal');
+
+      // Click poster to open lightbox
+      await zoomPoster.click();
+      await page.waitForSelector('#lightbox.active', { timeout: 5000 });
+      const lightboxVisible = await page.locator('#lightbox.active').count();
+      assert(lightboxVisible > 0, 'Lightbox did not open on poster click');
+
+      // Lightbox image src should match the poster
+      const imgSrc = await page.locator('#lightbox-img').getAttribute('src');
+      assert(imgSrc && imgSrc.startsWith('data:image/png'), 'Lightbox image src incorrect');
+
+      await shot(page, '00d-clubs-lightbox');
+
+      // Close lightbox via overlay click
+      await page.locator('#lightbox').click({ position: { x: 5, y: 5 } });
+      await page.waitForTimeout(300);
+      const stillActive = await page.locator('#lightbox.active').count();
+      assert(stillActive === 0, 'Lightbox did not close');
+    } finally {
+      // Clean up: delete the test club
+      await page.evaluate(async (id) => {
+        await fetch(`/api/admin/clubs/${id}`, { method: 'DELETE' });
+      }, created.id);
+    }
+
+    await page.close();
+  });
+
   // ═══════════════════════════════════════════════
   // CLEANUP FROM PREVIOUS RUN (at start, not end)
   // ═══════════════════════════════════════════════
