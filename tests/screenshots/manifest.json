@@ -307,5 +307,30 @@
         "file": "/workspace/group/compass7/tests/screenshots/25-preview-no-scroll.png"
       }
     ]
+  },
+  {
+    "test": "Visit tracking beacon fires on public pages",
+    "status": "passed",
+    "shots": []
+  },
+  {
+    "test": "Admin analytics API returns aggregated stats",
+    "status": "passed",
+    "shots": []
+  },
+  {
+    "test": "Admin analytics dashboard renders stat cards and charts",
+    "status": "passed",
+    "shots": [
+      {
+        "name": "26-analytics-dashboard",
+        "file": "/workspace/group/compass7/tests/screenshots/26-analytics-dashboard.png"
+      }
+    ]
+  },
+  {
+    "test": "Analytics dashboard hides when selecting a class",
+    "status": "passed",
+    "shots": []
   }
 ]
