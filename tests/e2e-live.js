@@ -1073,6 +1073,85 @@ async function addCourseAtSlot(page, day, period, nameCn, nameEn, teacher, room)
   });
 
   // ═══════════════════════════════════════════════
+  // ANALYTICS DASHBOARD (访问统计)
+  // ═══════════════════════════════════════════════
+
+  await test('Visit tracking beacon fires on public pages', async () => {
+    const page = await browser.newPage();
+    // Capture the /api/track request triggered on page load
+    const trackReqs = [];
+    page.on('request', (req) => {
+      if (req.url().includes('/api/track')) trackReqs.push(req.url());
+    });
+    await page.goto(`${BASE}/home`);
+    await page.waitForTimeout(1500);
+    // Also hit clubs + timetable to generate per-page data
+    await page.goto(`${BASE}/clubs`);
+    await page.waitForTimeout(1200);
+    await page.goto(`${BASE}/timetable`);
+    await page.waitForTimeout(1200);
+    assert(trackReqs.length >= 3, `Expected >=3 track beacons, got ${trackReqs.length}`);
+    console.log(`    Track beacons fired: ${trackReqs.length}`);
+    await page.close();
+  });
+
+  await test('Admin analytics API returns aggregated stats', async () => {
+    const page = await browser.newPage();
+    await adminLogin(page);
+    const result = await page.evaluate(async () => {
+      const res = await fetch('/api/admin/analytics?days=14', { credentials: 'include' });
+      return { ok: res.ok, data: await res.json() };
+    });
+    assert(result.ok, 'Analytics API should return 200 for admin');
+    assert(result.data.totals && typeof result.data.totals.views === 'number', 'Should have totals.views');
+    assert('guest_views' in result.data.totals, 'Should have totals.guest_views');
+    assert('user_views' in result.data.totals, 'Should have totals.user_views');
+    assert(Array.isArray(result.data.trend), 'Should have trend array');
+    assert(result.data.trend.length === 14, `Trend should have 14 days, got ${result.data.trend.length}`);
+    assert(Array.isArray(result.data.pages), 'Should have pages array');
+    console.log(`    Total views: ${result.data.totals.views}, guest: ${result.data.totals.guest_views}, user: ${result.data.totals.user_views}`);
+    await page.close();
+  });
+
+  await test('Admin analytics dashboard renders stat cards and charts', async () => {
+    const page = await browser.newPage();
+    await adminLogin(page);
+    // Open the analytics dashboard from the sidebar
+    await page.click('button[onclick="showAnalytics()"]');
+    await page.waitForSelector('#analytics-dashboard:not(.hidden)', { timeout: 8000 });
+    await page.waitForTimeout(1500);
+    // Stat cards should render (6 metric cards)
+    const statCards = await page.locator('#analytics-content .stat-card').count();
+    assert(statCards >= 4, `Expected >=4 stat cards, got ${statCards}`);
+    // Per-page breakdown section + trend chart should exist
+    const sections = await page.locator('#analytics-content .analytics-section').count();
+    assert(sections >= 2, `Expected >=2 analytics sections (pages + trend), got ${sections}`);
+    const trendCols = await page.locator('#analytics-content .trend-col').count();
+    assert(trendCols === 14, `Expected 14 trend columns, got ${trendCols}`);
+    console.log(`    Stat cards: ${statCards}, sections: ${sections}, trend cols: ${trendCols}`);
+    await shot(page, '26-analytics-dashboard');
+    await page.close();
+  });
+
+  await test('Analytics dashboard hides when selecting a class', async () => {
+    const page = await browser.newPage();
+    await adminLogin(page);
+    await page.click('button[onclick="showAnalytics()"]');
+    await page.waitForSelector('#analytics-dashboard:not(.hidden)', { timeout: 8000 });
+    // Now select the test year + class; dashboard should hide, editor should show
+    await page.locator('#years-list .sidebar-item').filter({ hasText: TEST_YEAR }).first().click();
+    await page.waitForTimeout(500);
+    await page.locator('#classes-list .sidebar-item').filter({ hasText: TEST_CLASS_A }).first().click();
+    await page.waitForTimeout(1200);
+    const dashHidden = await page.locator('#analytics-dashboard').evaluate(el => el.classList.contains('hidden'));
+    const editorVisible = await page.locator('#schedule-editor').isVisible();
+    assert(dashHidden, 'Analytics dashboard should be hidden after selecting a class');
+    assert(editorVisible, 'Schedule editor should be visible after selecting a class');
+    console.log(`    Dashboard hidden: ${dashHidden}, editor visible: ${editorVisible}`);
+    await page.close();
+  });
+
+  // ═══════════════════════════════════════════════
   // NO CLEANUP — data stays for manual inspection
   // ═══════════════════════════════════════════════
   console.log('\n  \u2139\ufe0f  Test data left on site for inspection (cleaned up on next run)');

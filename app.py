@@ -416,6 +416,42 @@ def public_get_club(club_id):
     return jsonify(club)
 
 
+# ── Analytics (访问统计) ───────────────────────────────
+
+@app.route("/api/track", methods=["POST"])
+def track_visit():
+    """Record a page view. Public endpoint called by track.js on page load.
+
+    The visit is classified as a registered-user view when a user session is
+    present, otherwise as a guest (anonymous) view. A client-supplied
+    anonymous visitor_id (localStorage) is used only for unique-visitor
+    counting.
+    """
+    data = request.get_json(silent=True) or {}
+    page = data.get("page", "")
+    visitor_id = data.get("visitor_id", "")
+    # Trust the server session for user identity, not the client payload.
+    user_id = session.get("user_id")
+    try:
+        storage.record_visit(page, visitor_id=visitor_id, user_id=user_id)
+    except Exception:
+        # Analytics must never break the user experience.
+        return jsonify({"ok": False}), 200
+    return jsonify({"ok": True})
+
+
+@app.route("/api/admin/analytics", methods=["GET"])
+@admin_required
+def admin_analytics():
+    """Return aggregated visit statistics for the admin dashboard."""
+    try:
+        days = int(request.args.get("days", 14))
+    except (TypeError, ValueError):
+        days = 14
+    days = max(1, min(days, 90))
+    return jsonify(storage.get_analytics_summary(days=days))
+
+
 # ── Pages: Clubs ──────────────────────────────────────
 
 @app.route("/clubs")

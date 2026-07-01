@@ -5,7 +5,7 @@ Supports local file storage for development/testing via STORAGE_MODE=local
 import json
 import os
 import uuid
-from datetime import datetime, timezone
+from datetime import datetime, timezone, timedelta
 
 STORAGE_MODE = os.environ.get("STORAGE_MODE", "azure")  # "azure" or "local"
 LOCAL_DATA_DIR = os.environ.get("LOCAL_DATA_DIR", os.path.join(os.path.dirname(__file__), "data"))
@@ -446,8 +446,148 @@ def get_club(club_id: str):
     return None
 
 
-# ── Image Upload ──────────────────────────────────────
+# ── Visit Analytics (访问统计) ─────────────────────────
 
+# Public pages we track. Anything else is bucketed under "other".
+TRACKED_PAGES = {"home", "timetable", "clubs"}
+_ANALYTICS_DAILY_LIMIT = 120  # keep at most ~4 months of daily buckets
+
+
+def _empty_analytics():
+    return {
+        "totals": {
+            "views": 0,            # all page views
+            "guest_views": 0,      # views by anonymous visitors
+            "user_views": 0,       # views by logged-in registered users
+        },
+        "pages": {},               # page -> view count
+        "daily": {},               # "YYYY-MM-DD" -> {views, guest, user}
+        "visitors": [],            # unique anonymous visitor ids seen
+        "users": [],               # unique registered user ids seen
+        "updated_at": None,
+    }
+
+
+def get_analytics():
+    """Return the raw analytics aggregate (with sensible defaults)."""
+    data = _read_blob("analytics.json", None)
+    if not data:
+        return _empty_analytics()
+    base = _empty_analytics()
+    # Merge stored values onto defaults so missing keys never break callers.
+    base["totals"].update(data.get("totals", {}))
+    base["pages"] = data.get("pages", {})
+    base["daily"] = data.get("daily", {})
+    base["visitors"] = data.get("visitors", [])
+    base["users"] = data.get("users", [])
+    base["updated_at"] = data.get("updated_at")
+    return base
+
+
+def record_visit(page: str, visitor_id: str = None, user_id: str = None):
+    """Record a single page view.
+
+    Args:
+        page: logical page key (home / timetable / clubs / ...)
+        visitor_id: anonymous per-browser id (localStorage), used for unique
+            visitor counting.
+        user_id: registered user id if the visitor is logged in. When present
+            the view is counted as a "user" (注册用户) view, otherwise "guest"
+            (游客) view.
+    """
+    page = (page or "other").strip().lower()
+    if page not in TRACKED_PAGES:
+        page = "other"
+
+    data = get_analytics()
+    is_user = bool(user_id)
+
+    # Totals
+    data["totals"]["views"] += 1
+    if is_user:
+        data["totals"]["user_views"] += 1
+    else:
+        data["totals"]["guest_views"] += 1
+
+    # Per-page
+    data["pages"][page] = data["pages"].get(page, 0) + 1
+
+    # Daily bucket (local-agnostic: uses UTC date)
+    today = datetime.now(timezone.utc).strftime("%Y-%m-%d")
+    day = data["daily"].get(today, {"views": 0, "guest": 0, "user": 0})
+    day["views"] += 1
+    if is_user:
+        day["user"] += 1
+    else:
+        day["guest"] += 1
+    data["daily"][today] = day
+
+    # Trim daily history to a bounded window
+    if len(data["daily"]) > _ANALYTICS_DAILY_LIMIT:
+        for old_key in sorted(data["daily"].keys())[:-_ANALYTICS_DAILY_LIMIT]:
+            data["daily"].pop(old_key, None)
+
+    # Unique visitors / users (store ids; lists kept small in practice)
+    if visitor_id and visitor_id not in data["visitors"]:
+        data["visitors"].append(visitor_id)
+    if is_user and user_id not in data["users"]:
+        data["users"].append(user_id)
+
+    data["updated_at"] = datetime.now(timezone.utc).isoformat()
+    _write_blob("analytics.json", data)
+    return data
+
+
+def get_analytics_summary(days: int = 14):
+    """Return a dashboard-friendly summary.
+
+    Includes totals, guest/user split, unique counts, a per-page breakdown,
+    today's views, and a `days`-length daily trend (oldest -> newest).
+    """
+    data = get_analytics()
+    totals = data["totals"]
+
+    # Daily trend for the last `days` days (fill gaps with zeros)
+    trend = []
+    today = datetime.now(timezone.utc).date()
+    for i in range(days - 1, -1, -1):
+        d = today - timedelta(days=i)
+        key = d.strftime("%Y-%m-%d")
+        bucket = data["daily"].get(key, {"views": 0, "guest": 0, "user": 0})
+        trend.append({
+            "date": key,
+            "views": bucket.get("views", 0),
+            "guest": bucket.get("guest", 0),
+            "user": bucket.get("user", 0),
+        })
+
+    today_key = today.strftime("%Y-%m-%d")
+    today_bucket = data["daily"].get(today_key, {"views": 0, "guest": 0, "user": 0})
+
+    # Per-page breakdown sorted by views desc
+    pages = [{"page": p, "views": v} for p, v in data["pages"].items()]
+    pages.sort(key=lambda x: x["views"], reverse=True)
+
+    return {
+        "totals": {
+            "views": totals.get("views", 0),
+            "guest_views": totals.get("guest_views", 0),
+            "user_views": totals.get("user_views", 0),
+            "unique_visitors": len(data.get("visitors", [])),
+            "unique_users": len(data.get("users", [])),
+        },
+        "today": {
+            "views": today_bucket.get("views", 0),
+            "guest": today_bucket.get("guest", 0),
+            "user": today_bucket.get("user", 0),
+        },
+        "pages": pages,
+        "trend": trend,
+        "updated_at": data.get("updated_at"),
+    }
+
+
+# ── Image Upload ──────────────────────────────────────
 def upload_image_blob(filename: str, data: bytes, content_type: str = "image/jpeg"):
     """Upload an image to blob storage and return the URL with SAS token for access."""
     from datetime import timedelta
